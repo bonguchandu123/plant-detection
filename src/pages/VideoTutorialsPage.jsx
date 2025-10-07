@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Video, Play, Clock, Eye, ThumbsUp, Star, Upload, Search, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Video, Play, Clock, Eye, ThumbsUp, Star, Upload, Search, X, CheckCircle, AlertCircle, FileVideo, Info, Youtube, Link as LinkIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import YouTube from 'react-youtube';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -153,7 +154,7 @@ const VideoTutorialsPage = () => {
 
   const updateProgress = async (videoId, watchedSeconds, totalSeconds) => {
     try {
-      await fetch(`${API_BASE_URL}/video-tutorials/${videoId}/progress`, {
+      const response = await fetch(`${API_BASE_URL}/video-tutorials/${videoId}/progress`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -164,7 +165,17 @@ const VideoTutorialsPage = () => {
           total_duration_seconds: totalSeconds
         })
       });
-      fetchUserProgress();
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.completed) {
+          alert('Video completed! Your learning progress has been updated.');
+        }
+        
+        fetchUserProgress();
+        fetchVideos();
+      }
     } catch (error) {
       console.error('Error updating progress:', error);
     }
@@ -200,15 +211,32 @@ const VideoTutorialsPage = () => {
               className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
             >
               <Upload className="w-5 h-5" />
-              Upload Video
+              Add Video
             </button>
+          </div>
+        </div>
+
+        {/* User Progress Summary */}
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-6 mb-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold mb-1">Your Learning Progress</h3>
+              <p className="text-green-100">
+                {Object.values(userProgress).filter(p => p.completed).length} videos completed
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold">
+                {Object.keys(userProgress).length}
+              </div>
+              <div className="text-green-100 text-sm">Videos Started</div>
+            </div>
           </div>
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
               <input
@@ -220,7 +248,6 @@ const VideoTutorialsPage = () => {
               />
             </div>
 
-            {/* Category Filter */}
             <select
               value={filters.category}
               onChange={(e) => setFilters({...filters, category: e.target.value})}
@@ -234,7 +261,6 @@ const VideoTutorialsPage = () => {
               ))}
             </select>
 
-            {/* Language Filter */}
             <select
               value={filters.language}
               onChange={(e) => setFilters({...filters, language: e.target.value})}
@@ -246,7 +272,6 @@ const VideoTutorialsPage = () => {
               <option value="english">English</option>
             </select>
 
-            {/* Difficulty Filter */}
             <select
               value={filters.difficulty}
               onChange={(e) => setFilters({...filters, difficulty: e.target.value})}
@@ -296,7 +321,11 @@ const VideoTutorialsPage = () => {
         {selectedVideo && (
           <VideoPlayerModal
             video={selectedVideo}
-            onClose={() => setSelectedVideo(null)}
+            progress={userProgress[selectedVideo.id]}
+            onClose={() => {
+              setSelectedVideo(null);
+              fetchUserProgress();
+            }}
             onUpdateProgress={updateProgress}
           />
         )}
@@ -313,115 +342,293 @@ const VideoTutorialsPage = () => {
   );
 };
 
-// Video Card Component
+// Video Card Component with YouTube badge
 const VideoCard = ({ video, progress, onPlay, onLike }) => {
+  const [showDescription, setShowDescription] = useState(false);
+  const isYouTube = video.video_source === 'youtube';
+  
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-all cursor-pointer group">
-      <div className="relative h-48 bg-gradient-to-br from-green-400 to-emerald-600">
-        {video.thumbnail_url ? (
-          <img 
-            src={video.thumbnail_url} 
-            alt={video.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Video className="w-16 h-16 text-white opacity-50" />
-          </div>
-        )}
-        
-        {video.is_featured && (
-          <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-xs font-bold">
-            FEATURED
-          </div>
-        )}
-        
-        {progress && progress.completed && (
-          <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs">
-            <CheckCircle className="w-3 h-3" />
-            Completed
-          </div>
-        )}
-        
-        <button
-          onClick={onPlay}
-          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all"
-        >
-          <Play className="w-16 h-16 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
-        
-        {progress && !progress.completed && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200">
-            <div
-              className="h-full bg-green-500 transition-all"
-              style={{ width: `${progress.progress_percentage}%` }}
+    <>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-lg transition-all">
+        <div className="relative h-48 bg-gradient-to-br from-green-400 to-emerald-600 cursor-pointer group">
+          {video.thumbnail_url ? (
+            <img 
+              src={video.thumbnail_url} 
+              alt={video.title}
+              className="w-full h-full object-cover"
             />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Video className="w-16 h-16 text-white opacity-50" />
+            </div>
+          )}
+          
+          {/* YouTube Badge */}
+          {isYouTube && (
+            <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded flex items-center gap-1 text-xs font-bold">
+              <Youtube className="w-3 h-3" />
+              YouTube
+            </div>
+          )}
+          
+          {video.is_featured && (
+            <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded text-xs font-bold">
+              FEATURED
+            </div>
+          )}
+          
+          {progress && progress.completed && (
+            <div className="absolute bottom-2 left-2 bg-green-500 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs">
+              <CheckCircle className="w-3 h-3" />
+              Completed
+            </div>
+          )}
+          
+          <button
+            onClick={onPlay}
+            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all"
+          >
+            <Play className="w-16 h-16 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
+          
+          {progress && !progress.completed && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200">
+              <div
+                className="h-full bg-green-500 transition-all"
+                style={{ width: `${progress.progress_percentage}%` }}
+              />
+            </div>
+          )}
+        </div>
+        
+        <div className="p-4">
+          <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{video.title}</h3>
+          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{video.description}</p>
+          
+          <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
+            <span className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {video.duration}
+            </span>
+            <span className="flex items-center gap-1">
+              <Eye className="w-4 h-4" />
+              {video.views_count}
+            </span>
           </div>
-        )}
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium capitalize">
+                {video.language}
+              </span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium capitalize">
+                {video.difficulty_level}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDescription(true);
+                }}
+                className="text-gray-600 hover:text-blue-600 transition-colors p-1 rounded-full hover:bg-blue-50"
+                title="View full description"
+              >
+                <Info className="w-5 h-5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLike();
+                }}
+                className="flex items-center gap-1 text-gray-600 hover:text-red-500 transition-colors"
+              >
+                <ThumbsUp className="w-4 h-4" />
+                <span className="text-sm">{video.likes_count}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
       
-      <div className="p-4">
-        <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{video.title}</h3>
-        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{video.description}</p>
-        
-        <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
-          <span className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            {video.duration}
-          </span>
-          <span className="flex items-center gap-1">
-            <Eye className="w-4 h-4" />
-            {video.views_count}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium capitalize">
-              {video.language}
-            </span>
-            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium capitalize">
-              {video.difficulty_level}
-            </span>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onLike();
-            }}
-            className="flex items-center gap-1 text-gray-600 hover:text-red-500 transition-colors"
+      {/* Description Modal */}
+      {showDescription && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => setShowDescription(false)}
+        >
+          <div 
+            className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto" 
+            onClick={(e) => e.stopPropagation()}
           >
-            <ThumbsUp className="w-4 h-4" />
-            <span className="text-sm">{video.likes_count}</span>
-          </button>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-gray-900 pr-4">{video.title}</h3>
+              <button 
+                onClick={() => setShowDescription(false)} 
+                className="text-gray-500 hover:text-gray-700 flex-shrink-0"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <h4 className="font-semibold text-gray-900 mb-2">Description</h4>
+              <p className="text-gray-700 whitespace-pre-wrap">{video.description}</p>
+            </div>
+            
+            <div className="flex gap-2 flex-wrap mb-4">
+              {isYouTube && (
+                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm flex items-center gap-1">
+                  <Youtube className="w-3 h-3" />
+                  YouTube Video
+                </span>
+              )}
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm capitalize">
+                {video.language}
+              </span>
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm capitalize">
+                {video.difficulty_level}
+              </span>
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm capitalize">
+                {video.category.replace(/_/g, ' ')}
+              </span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {video.duration}
+              </span>
+            </div>
+            
+            <button
+              onClick={() => {
+                setShowDescription(false);
+                onPlay();
+              }}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 flex items-center justify-center gap-2 transition-colors"
+            >
+              <Play className="w-5 h-5" />
+              Watch Video
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 };
 
-// Video Player Modal
-const VideoPlayerModal = ({ video, onClose, onUpdateProgress }) => {
+// Video Player Modal with YouTube support
+const VideoPlayerModal = ({ video, progress, onClose, onUpdateProgress }) => {
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [videoError, setVideoError] = useState(false);
+  const [hasNotifiedCompletion, setHasNotifiedCompletion] = useState(false);
+  const [youtubePlayer, setYoutubePlayer] = useState(null);
 
+  const isYouTube = video.video_source === 'youtube';
+
+  // Extract YouTube video ID
+  const getYouTubeVideoId = (url) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const youtubeVideoId = isYouTube ? getYouTubeVideoId(video.video_url) : null;
+
+  // YouTube player options
+  const youtubeOpts = {
+    height: '100%',
+    width: '100%',
+    playerVars: {
+      autoplay: 1,
+      modestbranding: 1,
+      rel: 0
+    }
+  };
+
+  // Handle YouTube player events
+  const onYouTubeReady = (event) => {
+    setYoutubePlayer(event.target);
+    const videoDuration = event.target.getDuration();
+    setDuration(videoDuration);
+  };
+
+  const onYouTubeStateChange = (event) => {
+    if (youtubePlayer) {
+      const currentTime = youtubePlayer.getCurrentTime();
+      setCurrentTime(currentTime);
+    }
+  };
+
+  // Update progress for YouTube videos
   useEffect(() => {
-    if (!videoError) {
+    if (isYouTube && youtubePlayer && duration > 0) {
       const interval = setInterval(() => {
+        const currentTime = youtubePlayer.getCurrentTime();
+        setCurrentTime(currentTime);
+        
         if (currentTime > 0) {
-          onUpdateProgress(video.id, Math.floor(currentTime), video.duration_minutes * 60);
+          onUpdateProgress(video.id, Math.floor(currentTime), Math.floor(duration));
+          
+          const progressPercentage = (currentTime / duration) * 100;
+          if (progressPercentage >= 90 && !hasNotifiedCompletion) {
+            setHasNotifiedCompletion(true);
+          }
         }
       }, 5000);
 
       return () => clearInterval(interval);
     }
-  }, [currentTime, videoError]);
+  }, [youtubePlayer, duration, hasNotifiedCompletion, isYouTube]);
+
+  // Update progress for regular videos
+  useEffect(() => {
+    if (!isYouTube && !videoError && duration > 0 && currentTime > 0) {
+      const interval = setInterval(() => {
+        onUpdateProgress(video.id, Math.floor(currentTime), Math.floor(duration));
+        
+        const progressPercentage = (currentTime / duration) * 100;
+        if (progressPercentage >= 90 && !hasNotifiedCompletion) {
+          setHasNotifiedCompletion(true);
+        }
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [currentTime, duration, videoError, hasNotifiedCompletion, isYouTube]);
+
+  const handleVideoLoaded = (e) => {
+    setDuration(e.target.duration);
+  };
+
+  const handleTimeUpdate = (e) => {
+    setCurrentTime(e.target.currentTime);
+  };
+
+  const handleVideoEnd = () => {
+    onUpdateProgress(video.id, Math.floor(duration), Math.floor(duration));
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center z-10">
-          <h2 className="text-xl font-bold text-gray-900">{video.title}</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900">{video.title}</h2>
+              {isYouTube && (
+                <span className="bg-red-600 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                  <Youtube className="w-3 h-3" />
+                  YouTube
+                </span>
+              )}
+            </div>
+            {progress && progress.completed && (
+              <div className="flex items-center gap-2 text-green-600 text-sm mt-1">
+                <CheckCircle className="w-4 h-4" />
+                <span>Completed</span>
+              </div>
+            )}
+          </div>
           <button 
             onClick={onClose} 
             className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -432,7 +639,24 @@ const VideoPlayerModal = ({ video, onClose, onUpdateProgress }) => {
 
         <div className="p-6">
           <div className="aspect-video bg-gray-900 rounded-lg mb-6 flex items-center justify-center overflow-hidden">
-            {videoError ? (
+            {isYouTube ? (
+              youtubeVideoId ? (
+                <YouTube
+                  videoId={youtubeVideoId}
+                  opts={youtubeOpts}
+                  onReady={onYouTubeReady}
+                  onStateChange={onYouTubeStateChange}
+                  onEnd={handleVideoEnd}
+                  className="w-full h-full"
+                />
+              ) : (
+                <div className="text-center text-white p-8">
+                  <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
+                  <p className="text-lg mb-2">Invalid YouTube URL</p>
+                  <p className="text-sm opacity-75">Could not extract video ID</p>
+                </div>
+              )
+            ) : videoError ? (
               <div className="text-center text-white p-8">
                 <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
                 <p className="text-lg mb-2">Video not available</p>
@@ -445,13 +669,31 @@ const VideoPlayerModal = ({ video, onClose, onUpdateProgress }) => {
                 controls
                 autoPlay
                 className="w-full h-full rounded-lg"
-                onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+                onLoadedMetadata={handleVideoLoaded}
+                onTimeUpdate={handleTimeUpdate}
+                onEnded={handleVideoEnd}
                 onError={() => setVideoError(true)}
               >
                 Your browser does not support video playback.
               </video>
             )}
           </div>
+
+          {/* Progress Bar */}
+          {progress && !progress.completed && duration > 0 && (
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Progress: {Math.round((currentTime / duration) * 100)}%</span>
+                <span>{(currentTime / duration) * 100 >= 90 ? 'Almost done!' : 'Keep watching to complete'}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all"
+                  style={{ width: `${(currentTime / duration) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
@@ -473,7 +715,7 @@ const VideoPlayerModal = ({ video, onClose, onUpdateProgress }) => {
 
             <div>
               <h3 className="font-bold text-gray-900 mb-2">Description</h3>
-              <p className="text-gray-600">{video.description}</p>
+              <p className="text-gray-600 whitespace-pre-wrap">{video.description}</p>
             </div>
 
             {video.topics_covered && video.topics_covered.length > 0 && (
@@ -508,55 +750,111 @@ const VideoPlayerModal = ({ video, onClose, onUpdateProgress }) => {
   );
 };
 
-// Upload Modal
+// Upload Modal with YouTube URL support
 const UploadModal = ({ onClose, onSuccess }) => {
+  const [uploadType, setUploadType] = useState('file'); // 'file' or 'youtube'
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: 'pest_control',
     duration_minutes: 5,
     language: 'telugu',
-    difficulty_level: 'beginner'
+    difficulty_level: 'beginner',
+    youtube_url: ''
   });
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState('');
   const token = localStorage.getItem('token');
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    
+    if (!selectedFile) return;
+    
+    if (!selectedFile.type.startsWith('video/')) {
+      setError('Please select a valid video file (mp4, avi, mov, etc.)');
+      setFile(null);
+      return;
+    }
+    
+    const fileSizeMB = selectedFile.size / (1024 * 1024);
+    if (fileSizeMB > 100) {
+      setError(`File too large (${fileSizeMB.toFixed(1)}MB). Maximum size is 100MB`);
+      setFile(null);
+      return;
+    }
+    
+    setError('');
+    setFile(selectedFile);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      alert('Please select a video file');
+    
+    if (uploadType === 'file' && !file) {
+      setError('Please select a video file');
+      return;
+    }
+
+    if (uploadType === 'youtube' && !formData.youtube_url) {
+      setError('Please enter a YouTube URL');
       return;
     }
 
     setUploading(true);
+    setUploadProgress(0);
+    
     const formDataObj = new FormData();
-    formDataObj.append('file', file);
-    Object.keys(formData).forEach(key => {
-      formDataObj.append(key, formData[key]);
-    });
+    
+    if (uploadType === 'file') {
+      formDataObj.append('file', file);
+    } else {
+      formDataObj.append('youtube_url', formData.youtube_url);
+    }
+    
+    formDataObj.append('title', formData.title);
+    formDataObj.append('description', formData.description);
+    formDataObj.append('category', formData.category);
+    formDataObj.append('duration_minutes', formData.duration_minutes.toString());
+    formDataObj.append('language', formData.language);
+    formDataObj.append('difficulty_level', formData.difficulty_level);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/video-tutorials/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formDataObj
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          setUploadProgress(Math.round(percentComplete));
+        }
       });
-
-      if (response.ok) {
-        alert('Video uploaded successfully!');
-        onSuccess();
-        onClose();
-      } else {
-        const error = await response.json();
-        alert(error.detail || 'Failed to upload video');
-      }
+      
+      xhr.addEventListener('load', async () => {
+        if (xhr.status === 200) {
+          alert('Video added successfully!');
+          onSuccess();
+          onClose();
+        } else {
+          const error = JSON.parse(xhr.responseText);
+          setError(error.detail || 'Failed to add video');
+        }
+        setUploading(false);
+      });
+      
+      xhr.addEventListener('error', () => {
+        setError('Network error during upload');
+        setUploading(false);
+      });
+      
+      xhr.open('POST', `${API_BASE_URL}/video-tutorials/upload`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.send(formDataObj);
+      
     } catch (error) {
-      console.error('Error uploading video:', error);
-      alert('Error uploading video');
-    } finally {
+      console.error('Error adding video:', error);
+      setError('Error adding video: ' + error.message);
       setUploading(false);
     }
   };
@@ -565,26 +863,128 @@ const UploadModal = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold">Upload Video Tutorial</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <h2 className="text-xl font-bold">Add Video Tutorial</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700" disabled={uploading}>
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Video File *</label>
-            <input
-              type="file"
-              accept="video/*"
-              onChange={(e) => setFile(e.target.files[0])}
-              className="w-full border border-gray-300 rounded-lg p-2"
-              required
-            />
-            {file && (
-              <p className="text-sm text-gray-600 mt-1">Selected: {file.name}</p>
-            )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          {/* Upload Type Selection */}
+          <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setUploadType('file')}
+              className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors flex items-center justify-center gap-2 ${
+                uploadType === 'file'
+                  ? 'bg-white text-green-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              disabled={uploading}
+            >
+              <FileVideo className="w-4 h-4" />
+              Upload Video
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadType('youtube')}
+              className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors flex items-center justify-center gap-2 ${
+                uploadType === 'youtube'
+                  ? 'bg-white text-red-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              disabled={uploading}
+            >
+              <Youtube className="w-4 h-4" />
+              YouTube URL
+            </button>
           </div>
+          
+          {/* File Upload or YouTube URL */}
+          {uploadType === 'file' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Video File * (Max 100MB)
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
+                <FileVideo className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="video-upload"
+                  disabled={uploading}
+                />
+                <label htmlFor="video-upload" className="cursor-pointer">
+                  <span className="text-green-600 hover:text-green-700 font-medium">
+                    Choose video file
+                  </span>
+                  <span className="text-gray-500 text-sm ml-2">
+                    or drag and drop
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">MP4, AVI, MOV up to 100MB</p>
+              </div>
+              {file && (
+                <div className="mt-2 p-3 bg-green-50 rounded-lg flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                    <p className="text-xs text-gray-600">
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                YouTube URL *
+              </label>
+              <div className="relative">
+                <LinkIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <input
+                  type="url"
+                  value={formData.youtube_url}
+                  onChange={(e) => setFormData({...formData, youtube_url: e.target.value})}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  disabled={uploading}
+                  required={uploadType === 'youtube'}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Paste the full YouTube video URL
+              </p>
+            </div>
+          )}
+
+          {uploading && uploadType === 'file' && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Uploading...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                Please wait, this may take a few minutes for large files
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
@@ -592,9 +992,10 @@ const UploadModal = ({ onClose, onSuccess }) => {
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg p-2"
+              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter video title"
               required
+              disabled={uploading}
             />
           </div>
 
@@ -603,10 +1004,11 @@ const UploadModal = ({ onClose, onSuccess }) => {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({...formData, description: e.target.value})}
-              className="w-full border border-gray-300 rounded-lg p-2"
+              className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               rows="3"
               placeholder="Describe what this video teaches"
               required
+              disabled={uploading}
             />
           </div>
 
@@ -616,7 +1018,8 @@ const UploadModal = ({ onClose, onSuccess }) => {
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({...formData, category: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg p-2"
+                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                disabled={uploading}
               >
                 <option value="pest_control">Pest Control</option>
                 <option value="soil_management">Soil Management</option>
@@ -632,9 +1035,10 @@ const UploadModal = ({ onClose, onSuccess }) => {
                 type="number"
                 value={formData.duration_minutes}
                 onChange={(e) => setFormData({...formData, duration_minutes: parseInt(e.target.value)})}
-                className="w-full border border-gray-300 rounded-lg p-2"
+                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 min="1"
                 required
+                disabled={uploading}
               />
             </div>
           </div>
@@ -645,7 +1049,8 @@ const UploadModal = ({ onClose, onSuccess }) => {
               <select
                 value={formData.language}
                 onChange={(e) => setFormData({...formData, language: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg p-2"
+                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                disabled={uploading}
               >
                 <option value="telugu">Telugu</option>
                 <option value="hindi">Hindi</option>
@@ -658,7 +1063,8 @@ const UploadModal = ({ onClose, onSuccess }) => {
               <select
                 value={formData.difficulty_level}
                 onChange={(e) => setFormData({...formData, difficulty_level: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg p-2"
+                className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                disabled={uploading}
               >
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
@@ -669,10 +1075,20 @@ const UploadModal = ({ onClose, onSuccess }) => {
 
           <button
             type="submit"
-            disabled={uploading}
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            disabled={uploading || (uploadType === 'file' && !file) || (uploadType === 'youtube' && !formData.youtube_url)}
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
-            {uploading ? 'Uploading...' : 'Upload Video'}
+            {uploading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                {uploadType === 'file' ? `Uploading... ${uploadProgress}%` : 'Adding...'}
+              </>
+            ) : (
+              <>
+                {uploadType === 'file' ? <Upload className="w-5 h-5" /> : <Youtube className="w-5 h-5" />}
+                {uploadType === 'file' ? 'Upload Video' : 'Add YouTube Video'}
+              </>
+            )}
           </button>
         </form>
       </div>

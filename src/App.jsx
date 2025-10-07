@@ -1,67 +1,64 @@
 import React, { useState } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import DashboardPage from './pages/DashboardPage';
 import AnalyzeCropPage from './pages/AnalyzeCropPage';
 import OrganicSolutionsPage from './pages/OrganicSolution';
-import TraditionalKnowledgePage  from './pages/TraditionalKnowledgePage';
-
-import { WeatherAdvisoryPage } from './pages/WeatherAdvisoryPage';
-
-
-import  ImpactPage  from './pages/ImpactPage';
+import TraditionalKnowledgePage from './pages/TraditionalKnowledgePage';
+import WeatherAdvisoryPage from './pages/WeatherAdvisoryPage';
+import ImpactPage from './pages/ImpactPage';
 import SuppliersPages from './pages/SuppliersPage';
 import AuthPage from './pages/AuthPage';
 import AuthProvider, { useAuth } from './context/AuthContext';
-import { BrowserRouter } from 'react-router-dom';
 import SeasonalCalendarPage from './pages/SeasonalCalendarPage';
-
 import VideoTutorialsPage from './pages/VideoTutorialsPage';
 import CommunityPage from './pages/CommunityPage';
-import VoiceAssistant from './pages/VoiceAssistant';
 import ConsultationPage from './pages/ConsultationPage';
-// Import Pages
+import ProductMarketplace from './pages/Product';
+import VoiceAgent from './pages/VoiceAssistant';
+import Chatbot from './components/Chatbot';
 
 const AppContent = () => {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState('home');
   const [showMenu, setShowMenu] = useState(false);
 
-  // If not logged in, show auth page
+  // If not logged in, show auth page (no voice agent on auth page)
   if (!user) {
-    return <AuthPage/>;
+    return <AuthPage />;
   }
 
   // Render current page
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <DashboardPage/>;
+        return <DashboardPage setCurrentPage={setCurrentPage} />;
       case 'analyze':
-        return <AnalyzeCropPage/>;
+        return <AnalyzeCropPage />;
       case 'solutions':
-        return <OrganicSolutionsPage/>;
+        return <OrganicSolutionsPage />;
       case 'traditional':
-        return <TraditionalKnowledgePage/>;
+        return <TraditionalKnowledgePage />;
       case 'calendar':
-        return <SeasonalCalendarPage/>;
+        return <SeasonalCalendarPage />;
       case 'weather':
-        return <WeatherAdvisoryPage/>;
+        return <WeatherAdvisoryPage />;
       case 'tutorials':
-        return <VideoTutorialsPage/>;
+        return <VideoTutorialsPage />;
       case 'community':
-        return <CommunityPage/>;
+        return <CommunityPage />;
       case 'consultation':
-        return <ConsultationPage/>;
+        return <ConsultationPage />;
       case 'suppliers':
-        return <SuppliersPages/>;
+        return <SuppliersPages />;
       case 'impact':
-        return <ImpactPage/>;
-      case 'VoiceAssistant':
-        return <VoiceAssistant/>;
+        return <ImpactPage />;
+      case 'product':
+        return <ProductMarketplace />;
       default:
-        return <DashboardPage/>;
+        return <DashboardPage setCurrentPage={setCurrentPage} />;
     }
   };
 
@@ -81,6 +78,16 @@ const AppContent = () => {
           {renderPage()}
         </main>
       </div>
+
+      {/* 🤖 AI Chatbot - Bottom Right */}
+      <div className="fixed bottom-6 right-6 z-[100]">
+        <Chatbot />
+      </div>
+
+      {/* 🎤 Voice Agent - Bottom Left */}
+      <div className="fixed bottom-6 left-6 z-[100]">
+        <VoiceAgent />
+      </div>
     </div>
   );
 };
@@ -88,9 +95,9 @@ const AppContent = () => {
 const App = () => {
   return (
     <BrowserRouter>
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   );
 };

@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, Filter, Plus, X, TrendingUp, DollarSign, Star, Users, 
-  ChevronRight, AlertCircle, Edit, Trash2, Image as ImageIcon, Save 
+  ChevronRight, AlertCircle, Edit, Trash2, Image as ImageIcon, Save, Check 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-
 const API_URL = 'http://localhost:8000/api';
-
-// Auth Hook (assuming this exists)
-
 
 // Image Upload Component
 function ImageUpload({ onImageUploaded, currentImage }) {
@@ -303,13 +299,15 @@ function CreateSolutionForm({ onBack, editMode = false, existingSolution = null 
   );
 }
 
-// Solution Detail View
+// Solution Detail View - WITH APPLY BUTTON
 function SolutionDetailView({ solutionId, onBack, onEdit, onDelete }) {
   const [solution, setSolution] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [applying, setApplying] = useState(false); // NEW
   const { getToken, user } = useAuth();
   const isSpecialist = user?.role === 'specialist';
+  const isFarmer = user?.role === 'farmer';
 
   useEffect(() => {
     fetchDetails();
@@ -323,7 +321,6 @@ function SolutionDetailView({ solutionId, onBack, onEdit, onDelete }) {
       });
       if (response.ok) {
         const data = await response.json();
-        // Transform _id to id for consistency
         const transformedData = {
           ...data,
           id: data._id || data.id
@@ -365,6 +362,39 @@ function SolutionDetailView({ solutionId, onBack, onEdit, onDelete }) {
     }
   };
 
+  // NEW: Apply solution handler
+  const handleApplySolution = async () => {
+    try {
+      setApplying(true);
+      const token = getToken();
+      const response = await fetch(`${API_URL}/organic-solutions/${solutionId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          area_applied: 1.0,
+          notes: "Applied from organic solutions page",
+          location: user?.village || user?.district
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to apply solution');
+      }
+
+      alert('✅ Solution applied successfully! Check your dashboard for updated metrics.');
+      fetchDetails(); // Refresh to show updated application count
+    } catch (error) {
+      console.error('Apply error:', error);
+      alert('❌ Failed to apply solution: ' + error.message);
+    } finally {
+      setApplying(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -384,24 +414,39 @@ function SolutionDetailView({ solutionId, onBack, onEdit, onDelete }) {
           <ChevronRight size={20} className="rotate-180" />Back to Solutions
         </button>
         
-        {isSpecialist && (
-          <div className="flex gap-3">
+        <div className="flex gap-3">
+          {/* NEW: Apply Button for Farmers */}
+          {isFarmer && (
             <button 
-              onClick={() => onEdit(solution)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={handleApplySolution}
+              disabled={applying}
+              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 shadow-lg font-semibold"
             >
-              <Edit size={20} />Edit
+              <Check size={20} />
+              {applying ? 'Applying...' : 'Apply This Solution'}
             </button>
-            <button 
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400"
-            >
-              <Trash2 size={20} />
-              {deleting ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
-        )}
+          )}
+
+          {/* Specialist Buttons */}
+          {isSpecialist && (
+            <>
+              <button 
+                onClick={() => onEdit(solution)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Edit size={20} />Edit
+              </button>
+              <button 
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400"
+              >
+                <Trash2 size={20} />
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {solution.image_url && (
@@ -536,7 +581,7 @@ function SolutionDetailView({ solutionId, onBack, onEdit, onDelete }) {
   );
 }
 
-// Main Component
+// Main Component - WITH QUICK APPLY BUTTONS
 export default function OrganicSolutionsPage() {
   const [solutions, setSolutions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -549,6 +594,7 @@ export default function OrganicSolutionsPage() {
   const [seeding, setSeeding] = useState(false);
   const { getToken, user } = useAuth();
   const isSpecialist = user?.role === 'specialist';
+  const isFarmer = user?.role === 'farmer';
 
   useEffect(() => {
     fetchSolutions();
@@ -569,7 +615,6 @@ export default function OrganicSolutionsPage() {
       
       if (response.ok) {
         const data = await response.json();
-        // Transform _id to id for easier frontend handling
         const transformedData = data.map(item => ({
           ...item,
           id: item._id || item.id
@@ -596,7 +641,6 @@ export default function OrganicSolutionsPage() {
       );
       if (response.ok) {
         const data = await response.json();
-        // Transform _id to id for easier frontend handling
         const transformedData = data.map(item => ({
           ...item,
           id: item._id || item.id
@@ -633,6 +677,35 @@ export default function OrganicSolutionsPage() {
       alert('Failed to seed data');
     } finally {
       setSeeding(false);
+    }
+  };
+
+  // NEW: Quick apply from card
+  const handleQuickApply = async (e, solutionId) => {
+    e.stopPropagation(); // Prevent card click
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_URL}/organic-solutions/${solutionId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          area_applied: 1.0,
+          location: user?.village || user?.district
+        })
+      });
+      
+      if (response.ok) {
+        alert('✅ Applied! Check your dashboard.');
+        fetchSolutions(); // Refresh to update application counts
+      } else {
+        alert('❌ Failed to apply');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ Error applying solution');
     }
   };
 
@@ -702,6 +775,7 @@ export default function OrganicSolutionsPage() {
 
       <div className="bg-white rounded-lg border p-4 space-y-4 shadow-sm">
         <div className="flex gap-3">
+          
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
@@ -763,39 +837,75 @@ export default function OrganicSolutionsPage() {
         <div className="text-center py-12 bg-white rounded-lg border shadow-sm">
           <AlertCircle className="mx-auto text-gray-400 mb-4" size={48} />
           <p className="text-gray-600">No solutions found</p>
+          {isSpecialist && (
+            <button 
+              onClick={handleSeedData}
+              className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Seed Sample Data
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {solutions.map((s) => (
             <div 
               key={s.id || s._id} 
-              onClick={() => setSelectedSolution(s.id || s._id)} 
-              className="bg-white border rounded-lg overflow-hidden hover:border-green-500 cursor-pointer transition-all hover:shadow-lg"
+              className="bg-white border rounded-lg overflow-hidden hover:border-green-500 transition-all hover:shadow-lg"
             >
               {s.image_url ? (
                 <img 
                   src={s.image_url} 
                   alt={s.title} 
-                  className="w-full h-48 object-cover"
+                  className="w-full h-48 object-cover cursor-pointer"
+                  onClick={() => setSelectedSolution(s.id || s._id)}
                   onError={(e) => {
                     e.target.style.display = 'none';
                   }}
                 />
               ) : (
-                <div className="w-full h-48 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                <div 
+                  className="w-full h-48 bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center cursor-pointer"
+                  onClick={() => setSelectedSolution(s.id || s._id)}
+                >
                   <ImageIcon size={48} className="text-green-400" />
                 </div>
               )}
               <div className="p-5">
-                <h3 className="text-lg font-semibold mb-2">{s.title}</h3>
+                <h3 
+                  className="text-lg font-semibold mb-2 cursor-pointer hover:text-green-600"
+                  onClick={() => setSelectedSolution(s.id || s._id)}
+                >
+                  {s.title}
+                </h3>
                 <p className="text-sm text-gray-600 mb-4 line-clamp-2">{s.description}</p>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm mb-4">
                   <span className="text-green-600 font-medium">{s.success_rate}% Success</span>
                   <span className="text-blue-600 font-medium">₹{s.cost_per_acre}/acre</span>
                 </div>
-                <div className="mt-3 pt-3 border-t flex justify-between text-xs text-gray-500">
+                <div className="mb-4 pb-4 border-b flex justify-between text-xs text-gray-500">
                   <span className="capitalize">{s.category.replace('_', ' ')}</span>
                   <span>{s.preparation_time}</span>
+                </div>
+
+                {/* NEW: Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedSolution(s.id || s._id)}
+                    className="flex-1 px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 text-sm font-medium transition-colors"
+                  >
+                    View Details
+                  </button>
+                  {isFarmer && (
+                    <button
+                      onClick={(e) => handleQuickApply(e, s.id || s._id)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors flex items-center gap-1"
+                      title="Apply this solution"
+                    >
+                      <Check size={16} />
+                      Apply
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -805,3 +915,4 @@ export default function OrganicSolutionsPage() {
     </div>
   );
 }
+        

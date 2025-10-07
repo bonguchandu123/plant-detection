@@ -9,6 +9,7 @@ export default function ConsultationPage() {
   const [specialists, setSpecialists] = useState([]);
   const [activeChats, setActiveChats] = useState([]);
   const [videoRequests, setVideoRequests] = useState([]);
+  const [activeCalls, setActiveCalls] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
@@ -45,7 +46,7 @@ export default function ConsultationPage() {
 
   useEffect(() => {
     if (notification) {
-      const timer = setTimeout(() => setNotification(null), 5000);
+      const timer = setTimeout(() => setNotification(null), 8000);
       return () => clearTimeout(timer);
     }
   }, [notification]);
@@ -55,6 +56,7 @@ export default function ConsultationPage() {
       fetchSpecialists();
     } else if (isSpecialist && view === 'main') {
       fetchPendingVideoRequests();
+      checkForActiveCalls();
     } else if (view === 'chats') {
       fetchActiveChats();
     } else if (view === 'my-requests') {
@@ -63,11 +65,14 @@ export default function ConsultationPage() {
   }, [view]);
 
   useEffect(() => {
-    if (isSpecialist) {
-      const interval = setInterval(fetchPendingVideoRequests, 30000);
+    if (isSpecialist && view === 'main') {
+      const interval = setInterval(() => {
+        fetchPendingVideoRequests();
+        checkForActiveCalls();
+      }, 5000);
       return () => clearInterval(interval);
     }
-  }, [isSpecialist]);
+  }, [isSpecialist, view]);
 
   useEffect(() => {
     if (isFarmer && view === 'my-requests') {
@@ -164,6 +169,37 @@ export default function ConsultationPage() {
     } catch (err) {
       console.error('Error fetching pending requests:', err);
     }
+  };
+
+  const checkForActiveCalls = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/consultations/active-calls`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const calls = await response.json();
+      setActiveCalls(calls);
+      
+      if (calls.length > 0 && !activeSession) {
+        setNotification({
+          type: 'info',
+          message: `${calls[0].farmer_name} is waiting in video call!`,
+          action: () => joinActiveCall(calls[0])
+        });
+      }
+    } catch (err) {
+      console.error('Error checking active calls:', err);
+    }
+  };
+
+  const joinActiveCall = async (call) => {
+    setActiveSession({
+      id: call.id,
+      room_id: call.room_id,
+      farmer_name: call.farmer_name,
+      session_type: 'video'
+    });
+    setView('activeCall');
+    await initializeWebRTC(call.id);
   };
 
   const fetchMessages = async (sessionId) => {
@@ -311,7 +347,6 @@ export default function ConsultationPage() {
       });
       setView('activeCall');
       await initializeWebRTC(request.id);
-      connectWebSocket(request.id);
     } catch (err) {
       setNotification({ type: 'error', message: err.message });
     } finally {
@@ -340,9 +375,11 @@ export default function ConsultationPage() {
       stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
 
       peerConnection.ontrack = (event) => {
+        console.log('Received remote track');
         if (remoteVideoRef.current && event.streams[0]) {
           remoteVideoRef.current.srcObject = event.streams[0];
           setCallStatus('connected');
+          setNotification({ type: 'success', message: 'Connected!' });
         }
       };
 
@@ -353,6 +390,7 @@ export default function ConsultationPage() {
       };
 
       peerConnection.onconnectionstatechange = () => {
+        console.log('Connection state:', peerConnection.connectionState);
         if (peerConnection.connectionState === 'connected') {
           setCallStatus('connected');
         } else if (peerConnection.connectionState === 'failed') {
@@ -361,14 +399,20 @@ export default function ConsultationPage() {
         }
       };
 
+      connectWebSocket(sessionId);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       if (isFarmer) {
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         sendWebRTCSignal(sessionId, 'offer', offer);
+        console.log('Offer sent');
       }
 
       setCallStatus('connecting');
     } catch (err) {
+      console.error('WebRTC init error:', err);
       setNotification({ type: 'error', message: 'Failed to access camera/microphone' });
       endSession();
     }
@@ -382,7 +426,7 @@ export default function ConsultationPage() {
         body: JSON.stringify({ signal_type: signalType, signal_data: signalData })
       });
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Error sending signal:', err);
     }
   };
 
@@ -391,18 +435,22 @@ export default function ConsultationPage() {
     if (!peerConnection) return;
 
     try {
+      console.log('Handling signal:', signalType);
+      
       if (signalType === 'offer') {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(signalData));
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         sendWebRTCSignal(activeSession.id, 'answer', answer);
+        console.log('Answer sent');
       } else if (signalType === 'answer') {
         await peerConnection.setRemoteDescription(new RTCSessionDescription(signalData));
+        console.log('Answer received');
       } else if (signalType === 'ice_candidate') {
         await peerConnection.addIceCandidate(new RTCIceCandidate(signalData));
       }
     } catch (err) {
-      console.error('WebRTC error:', err);
+      console.error('WebRTC signal error:', err);
     }
   };
 
@@ -427,14 +475,42 @@ export default function ConsultationPage() {
   };
 
   const connectWebSocket = (sessionId) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log('WebSocket already connected');
+      return;
+    }
+
     wsRef.current = new WebSocket(`${WS_BASE}/ws/consultation/${sessionId}?token=${token}`);
+    
+    wsRef.current.onopen = () => {
+      console.log('WebSocket connected');
+      wsRef.current.send(JSON.stringify({
+        type: 'user_joined',
+        user_id: currentUser.id,
+        user_role: currentUser.role
+      }));
+    };
+
     wsRef.current.onmessage = async (event) => {
       const data = JSON.parse(event.data);
+      console.log('WS message:', data.type);
+      
       if (data.type === 'webrtc_signal') {
         await handleWebRTCSignal(data.signal_type, data.signal_data);
       } else if (data.type === 'new_message') {
         setMessages(prev => [...prev, data.message]);
+      } else if (data.type === 'user_joined') {
+        console.log('User joined:', data.user_role);
+        setNotification({ type: 'info', message: `${data.user_role} joined` });
       }
+    };
+
+    wsRef.current.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    wsRef.current.onclose = () => {
+      console.log('WebSocket closed');
     };
   };
 
@@ -572,7 +648,6 @@ export default function ConsultationPage() {
               </div>
             </div>
           )}
-
           <div className="absolute bottom-6 right-6 w-64 h-48 bg-gray-800 rounded-lg overflow-hidden shadow-2xl border-2 border-gray-700">
             <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
             {!isVideoEnabled && (
@@ -604,10 +679,22 @@ export default function ConsultationPage() {
     <div className="max-w-7xl mx-auto p-6">
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-xl ${
-          notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-        } text-white flex items-center gap-3`}>
-          {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-          <span>{notification.message}</span>
+          notification.type === 'success' ? 'bg-green-600' : 
+          notification.type === 'info' ? 'bg-blue-600' : 'bg-red-600'
+        } text-white`}>
+          <div className="flex items-center gap-3">
+            {notification.type === 'success' ? <CheckCircle size={20} /> : 
+             notification.type === 'info' ? <Bell size={20} /> : <AlertCircle size={20} />}
+            <span className="flex-1">{notification.message}</span>
+            {notification.action && (
+              <button 
+                onClick={notification.action}
+                className="ml-4 px-4 py-2 bg-white bg-opacity-20 rounded hover:bg-opacity-30 font-semibold"
+              >
+                Join
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -627,17 +714,24 @@ export default function ConsultationPage() {
         )}
         
         {isSpecialist && (
-          <button 
-            onClick={() => setView('main')} 
-            className={`px-6 py-3 rounded-lg font-semibold relative ${view === 'main' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-          >
-            Video Requests
-            {pendingRequestsCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                {pendingRequestsCount}
+          <>
+            <button 
+              onClick={() => setView('main')} 
+              className={`px-6 py-3 rounded-lg font-semibold relative ${view === 'main' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+            >
+              Video Requests
+              {pendingRequestsCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {pendingRequestsCount}
+                </span>
+              )}
+            </button>
+            {activeCalls.length > 0 && (
+              <span className="px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-bold animate-pulse">
+                {activeCalls.length} Active Call(s)
               </span>
             )}
-          </button>
+          </>
         )}
         
         <button 
@@ -702,6 +796,31 @@ export default function ConsultationPage() {
               <RefreshCw size={18} /> Refresh
             </button>
           </div>
+
+          {activeCalls.length > 0 && (
+            <div className="mb-6 bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
+              <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+                <Bell className="animate-pulse" /> Active Video Calls Waiting
+              </h3>
+              <div className="space-y-3">
+                {activeCalls.map((call) => (
+                  <div key={call.id} className="bg-white rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-lg">{call.farmer_name}</p>
+                      <p className="text-sm text-gray-600">{call.topic}</p>
+                      <p className="text-xs text-gray-500">Started: {new Date(call.started_at).toLocaleTimeString()}</p>
+                    </div>
+                    <button 
+                      onClick={() => joinActiveCall(call)}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2 animate-pulse"
+                    >
+                      <Video size={20} /> Join Now
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           {loading && <div className="text-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent mx-auto"></div></div>}
           

@@ -8,8 +8,117 @@ import { useAuth } from '../context/AuthContext';
 
 const API_URL = 'http://localhost:8000/api';
 
-// Create Practice Form
+// Apply Practice Modal Component
+function ApplyPracticeModal({ practiceId, practiceName, onClose, onSuccess }) {
+  const [applying, setApplying] = useState(false);
+  const [formData, setFormData] = useState({
+    crop_id: '',
+    location: '',
+    notes: '',
+    before_photo_url: ''
+  });
+  const { getToken, user } = useAuth();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setApplying(true);
+      const token = getToken();
+      const response = await fetch(`${API_URL}/traditional-practices/${practiceId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          location: formData.location || user?.village || user?.district
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to apply practice');
+      }
+
+      alert('✅ Practice applied successfully! Check your dashboard for updated metrics.');
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('Apply error:', error);
+      alert('❌ Failed to apply practice: ' + error.message);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-lg w-full p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">Apply Practice</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+
+        <p className="text-gray-600 mb-4">
+          Record your application of <strong>{practiceName}</strong>
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Location (optional)
+            </label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({...formData, location: e.target.value})}
+              placeholder={user?.village || user?.district || "Enter location"}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes (optional)
+            </label>
+            <textarea
+              rows="3"
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              placeholder="Any observations or notes about this application..."
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={applying}
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 flex items-center justify-center gap-2"
+            >
+              <CheckCircle size={20} />
+              {applying ? 'Applying...' : 'Apply Practice'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Create Practice Form (no changes needed, keeping original)
 function CreatePracticeForm({ onBack, editMode = false, existingPractice = null }) {
+  // ... keep all your existing CreatePracticeForm code exactly as is ...
   const [formData, setFormData] = useState(
     existingPractice || {
       title: '',
@@ -430,7 +539,7 @@ function CreatePracticeForm({ onBack, editMode = false, existingPractice = null 
                 value={videoUrlInput} 
                 onChange={(e) => setVideoUrlInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addVideoUrl())}
-                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500" 
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500" 
                 placeholder="https://youtube.com/watch?v=..."
               />
               <button type="button" onClick={addVideoUrl} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
@@ -511,7 +620,7 @@ function CreatePracticeForm({ onBack, editMode = false, existingPractice = null 
   );
 }
 
-// Practice Detail View
+// Practice Detail View - WITH APPLY BUTTON
 function PracticeDetailView({ practiceId, onBack, onEdit, onDelete }) {
   const [practice, setPractice] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -519,6 +628,7 @@ function PracticeDetailView({ practiceId, onBack, onEdit, onDelete }) {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const { getToken, user } = useAuth();
   const isSpecialist = user?.role === 'specialist';
+  const isFarmer = user?.role === 'farmer';
 
   useEffect(() => {
     fetchDetails();
@@ -564,6 +674,10 @@ function PracticeDetailView({ practiceId, onBack, onEdit, onDelete }) {
     }
   };
 
+  const handleApplySuccess = () => {
+    fetchDetails(); // Refresh to show updated application count
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -578,18 +692,28 @@ function PracticeDetailView({ practiceId, onBack, onEdit, onDelete }) {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {showApplyModal && (
+        <ApplyPracticeModal
+          practiceId={practiceId}
+          practiceName={practice.title}
+          onClose={() => setShowApplyModal(false)}
+          onSuccess={handleApplySuccess}
+        />
+      )}
+
       <div className="flex justify-between items-center">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
           <ChevronRight size={20} className="rotate-180" />Back to Practices
         </button>
         
         <div className="flex gap-3">
-          {!isSpecialist && (
+          {isFarmer && (
             <button 
               onClick={() => setShowApplyModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-lg font-semibold"
             >
-              <CheckCircle size={20} />Apply Practice
+              <CheckCircle size={20} />
+              Apply This Practice
             </button>
           )}
           {isSpecialist && (
@@ -613,6 +737,7 @@ function PracticeDetailView({ practiceId, onBack, onEdit, onDelete }) {
         </div>
       </div>
 
+      {/* Rest of your existing detail view code - keep all as is */}
       <div className="bg-white rounded-lg border p-6 shadow-sm">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
@@ -620,7 +745,7 @@ function PracticeDetailView({ practiceId, onBack, onEdit, onDelete }) {
             <p className="text-gray-600 mb-4">{practice.description}</p>
           </div>
           {practice.verified_by_elders && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+            <div className="flex items-center gap-2 px-3py-1 bg-green-100 text-green-700 rounded-full text-sm">
               <Award size={16} />
               Elder Verified
             </div>
@@ -831,7 +956,7 @@ function PracticeDetailView({ practiceId, onBack, onEdit, onDelete }) {
   );
 }
 
-// Main Component
+// Main Component - WITH QUICK APPLY ON CARDS
 export default function TraditionalKnowledgePage() {
   const [practices, setPractices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -842,8 +967,10 @@ export default function TraditionalKnowledgePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({ category: '', region: '', season: '', difficulty: '', verified_only: false });
   const [seeding, setSeeding] = useState(false);
+  const [applyingPracticeId, setApplyingPracticeId] = useState(null);
   const { getToken, user } = useAuth();
   const isSpecialist = user?.role === 'specialist';
+  const isFarmer = user?.role === 'farmer';
 
   useEffect(() => {
     fetchPractices();
@@ -920,6 +1047,38 @@ export default function TraditionalKnowledgePage() {
       alert('Failed to seed data');
     } finally {
       setSeeding(false);
+    }
+  };
+
+  // NEW: Quick apply from card
+  const handleQuickApply = async (e, practiceId) => {
+    e.stopPropagation();
+    try {
+      setApplyingPracticeId(practiceId);
+      const token = getToken();
+      const response = await fetch(`${API_URL}/traditional-practices/${practiceId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          location: user?.village || user?.district,
+          notes: "Applied from traditional practices page"
+        })
+      });
+      
+      if (response.ok) {
+        alert('Applied successfully! Check your dashboard.');
+        fetchPractices();
+      } else {
+        alert('Failed to apply');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error applying practice');
+    } finally {
+      setApplyingPracticeId(null);
     }
   };
 
@@ -1086,18 +1245,30 @@ export default function TraditionalKnowledgePage() {
         <div className="text-center py-12 bg-white rounded-lg border shadow-sm">
           <AlertCircle className="mx-auto text-gray-400 mb-4" size={48} />
           <p className="text-gray-600">No practices found</p>
+          {isSpecialist && (
+            <button 
+              onClick={handleSeedData}
+              className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              Seed Sample Data
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {practices.map((p) => (
             <div 
               key={p.id} 
-              onClick={() => setSelectedPractice(p.id)} 
-              className="bg-white border rounded-lg overflow-hidden hover:border-purple-500 cursor-pointer transition-all hover:shadow-lg"
+              className="bg-white border rounded-lg overflow-hidden hover:border-purple-500 transition-all hover:shadow-lg"
             >
               <div className="p-5">
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-lg font-semibold flex-1">{p.title}</h3>
+                  <h3 
+                    className="text-lg font-semibold flex-1 cursor-pointer hover:text-purple-600"
+                    onClick={() => setSelectedPractice(p.id)}
+                  >
+                    {p.title}
+                  </h3>
                   {p.verified_by_elders && (
                     <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
                       <Award size={12} />
@@ -1120,7 +1291,7 @@ export default function TraditionalKnowledgePage() {
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2 mb-3">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs capitalize">
                     {p.category.replace('_', ' ')}
                   </span>
@@ -1133,7 +1304,7 @@ export default function TraditionalKnowledgePage() {
                 </div>
 
                 {p.best_for_crops && p.best_for_crops.length > 0 && (
-                  <div className="pt-3 border-t">
+                  <div className="pb-4 border-b mb-4">
                     <p className="text-xs text-gray-500 mb-1">Best for:</p>
                     <div className="flex flex-wrap gap-1">
                       {p.best_for_crops.slice(0, 3).map((crop, idx) => (
@@ -1147,6 +1318,27 @@ export default function TraditionalKnowledgePage() {
                     </div>
                   </div>
                 )}
+
+                {/* NEW: Action Buttons */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedPractice(p.id)}
+                    className="flex-1 px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 text-sm font-medium transition-colors"
+                  >
+                    View Details
+                  </button>
+                  {isFarmer && (
+                    <button
+                      onClick={(e) => handleQuickApply(e, p.id)}
+                      disabled={applyingPracticeId === p.id}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition-colors flex items-center gap-1 disabled:bg-gray-400"
+                      title="Apply this practice"
+                    >
+                      <CheckCircle size={16} />
+                      {applyingPracticeId === p.id ? '...' : 'Apply'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

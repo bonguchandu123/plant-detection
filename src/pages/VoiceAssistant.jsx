@@ -1,511 +1,728 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Phone, PhoneOff, Mic, MicOff, Loader, MessageCircle, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mic, MicOff, Phone, X, Volume2, VolumeX, Send, Sparkles, Loader, CheckCircle, AlertCircle, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const VoiceAssistant = () => {
-  const [vapi, setVapi] = useState(null);
-  const [isCallActive, setIsCallActive] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [messages, setMessages] = useState([]);
+// Update this to match your backend URL and port
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const VoiceAgent = () => {
+  // Mock auth for demo - replace with your actual auth context
+  
+  const [isOpen, setIsOpen] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [transcript, setTranscript] = useState([]);
   const [vapiConfig, setVapiConfig] = useState(null);
   const [userContext, setUserContext] = useState(null);
+  const [suggestedActions, setSuggestedActions] = useState([]);
   const [error, setError] = useState(null);
-  const [initStatus, setInitStatus] = useState('Initializing...');
-  const [volumeLevel, setVolumeLevel] = useState(0);
-  const messagesEndRef = useRef(null);
-  const callTimeoutRef = useRef(null);
-  const {getToken, user} = useAuth();
-
-  const API_BASE = 'http://localhost:8000';
-
-  useEffect(() => {
-    initializeVapi();
-    return () => {
-      if (vapi) {
-        try {
-          vapi.stop();
-        } catch (e) {
-          console.log('Cleanup:', e);
-        }
-      }
-      if (callTimeoutRef.current) {
-        clearTimeout(callTimeoutRef.current);
-      }
-    };
-  }, []);
+  const [textMode, setTextMode] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const {getToken} = useAuth();
+  
+  const vapiInstanceRef = useRef(null);
+  const transcriptEndRef = useRef(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isOpen) {
+      fetchVapiConfig();
+      fetchUserContext();
+    }
+  }, [isOpen]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    if (transcriptEndRef.current) {
+      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [transcript]);
+
+  const fetchVapiConfig = async () => {
+    try {
+      const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/vapi/config`, {
+        method: 'GET',
+        headers,
+        mode: 'cors' // Explicitly set CORS mode
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setVapiConfig(data);
+      
+      // Auto-switch to text mode if VAPI not configured
+      if (!data.publicKey || data.publicKey === 'your_vapi_public_key') {
+        setTextMode(true);
+        setError('Voice mode not configured. Using text chat instead.');
+      }
+    } catch (error) {
+      console.error('Error fetching VAPI config:', error);
+      setError(`Failed to connect to backend. Please ensure:\n1. Backend is running on ${API_BASE_URL}\n2. CORS is configured\n3. API endpoint is accessible`);
+      setTextMode(true); // Fallback to text mode
+    }
   };
 
- 
+  const fetchUserContext = async () => {
+    try {
+      const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
-  const addMessage = (role, content) => {
-    setMessages(prev => [...prev, {
+      const response = await fetch(`${API_BASE_URL}/api/vapi/user-context`, {
+        method: 'GET',
+        headers,
+        mode: 'cors'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserContext(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user context:', error);
+      // Non-critical, continue without context
+    }
+  };
+
+// Enhanced startCall function with detailed error handling and debugging
+
+const startCall = async () => {
+  if (!vapiConfig) {
+    setError('Voice agent not configured. Please add VAPI credentials to backend.');
+    return;
+  }
+
+  if (!vapiConfig.publicKey || vapiConfig.publicKey === 'your_vapi_public_key') {
+    setError('VAPI not configured. Using text chat instead.');
+    setTextMode(true);
+    return;
+  }
+
+  setIsLoading(true);
+  setError(null);
+
+  try {
+    // Request microphone permission first
+    console.log('🎤 Requesting microphone permission...');
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(track => track.stop());
+    console.log('✅ Microphone permission granted');
+
+    // Dynamically import VAPI SDK
+    console.log('📦 Loading VAPI SDK...');
+    const { default: Vapi } = await import('@vapi-ai/web');
+    console.log('✅ VAPI SDK loaded');
+    
+    const vapi = new Vapi(vapiConfig.publicKey);
+    vapiInstanceRef.current = vapi;
+
+    // Set up event listeners BEFORE starting the call
+    vapi.on('call-start', () => {
+      console.log('✅ Call started successfully');
+      setIsConnected(true);
+      setIsLoading(false);
+      addTranscript('system', 'Voice assistant connected! How can I help you today?');
+    });
+
+    vapi.on('call-end', () => {
+      console.log('📞 Call ended');
+      setIsConnected(false);
+      addTranscript('system', 'Call ended. Feel free to start a new conversation anytime!');
+    });
+
+    vapi.on('speech-start', () => {
+      console.log('🎤 User started speaking');
+    });
+
+    vapi.on('speech-end', () => {
+      console.log('🎤 User stopped speaking');
+    });
+
+    vapi.on('message', (message) => {
+      console.log('📨 Message received:', message);
+      
+      if (message.type === 'transcript' && message.transcriptType === 'final') {
+        if (message.role === 'user') {
+          addTranscript('user', message.transcript);
+        } else if (message.role === 'assistant') {
+          addTranscript('assistant', message.transcript);
+        }
+      }
+
+      if (message.type === 'function-call') {
+        console.log('⚡ Function call:', message.functionCall?.name);
+        handleFunctionCall(message);
+      }
+    });
+
+    vapi.on('error', async (error) => {
+      console.error('❌ VAPI Error Details:', {
+        type: error.type,
+        stage: error.stage,
+        error: error.error,
+        message: error.message,
+        totalDuration: error.totalDuration
+      });
+
+      // Try to extract more detailed error info
+      let errorMessage = 'Voice assistant error occurred.';
+      let detailedInfo = '';
+
+      if (error.error) {
+        // If error is a Response object, try to read it
+        if (error.error instanceof Response) {
+          try {
+            const errorBody = await error.error.json();
+            console.error('Error Response Body:', errorBody);
+            detailedInfo = errorBody.message || errorBody.error || JSON.stringify(errorBody);
+          } catch (e) {
+            try {
+              const errorText = await error.error.text();
+              console.error('Error Response Text:', errorText);
+              detailedInfo = errorText;
+            } catch (e2) {
+              console.error('Could not parse error response');
+            }
+          }
+        } else if (error.error.message) {
+          detailedInfo = error.error.message;
+        }
+      }
+
+      // Provide specific error messages based on error type
+      if (error.type === 'start-method-error') {
+        errorMessage = 'Failed to start VAPI call.\n\n';
+        
+        if (detailedInfo.includes('assistant') || detailedInfo.includes('not found')) {
+          errorMessage += '❌ Assistant ID may be invalid or not found.\n\nPossible solutions:\n';
+          errorMessage += '1. Verify your Assistant ID in VAPI dashboard\n';
+          errorMessage += '2. Check if assistant is published/active\n';
+          errorMessage += '3. Ensure Public Key matches the assistant\'s account\n';
+          errorMessage += `\nCurrent Assistant ID: ${vapiConfig.assistantId}`;
+        } else if (detailedInfo.includes('API key') || detailedInfo.includes('unauthorized')) {
+          errorMessage += '❌ Authentication failed.\n\nPossible solutions:\n';
+          errorMessage += '1. Verify your VAPI Public Key is correct\n';
+          errorMessage += '2. Check if your VAPI account is active\n';
+          errorMessage += '3. Regenerate API keys if needed';
+        } else if (detailedInfo.includes('quota') || detailedInfo.includes('limit')) {
+          errorMessage += '❌ API quota exceeded or limit reached.\n';
+          errorMessage += 'Check your VAPI account usage limits.';
+        } else {
+          errorMessage += `Error: ${detailedInfo}\n\n`;
+          errorMessage += 'Try these steps:\n';
+          errorMessage += '1. Check VAPI dashboard for any account issues\n';
+          errorMessage += '2. Verify assistant configuration\n';
+          errorMessage += '3. Test with a different assistant or create a new one';
+        }
+        
+        // Switch to text mode as fallback
+        setTextMode(true);
+      } else if (error.error && error.error.message) {
+        errorMessage = error.error.message;
+      }
+      
+      setError(errorMessage);
+      setIsLoading(false);
+      setIsConnected(false);
+    });
+
+    console.log('🚀 Starting VAPI call...');
+    console.log('Assistant ID:', vapiConfig.assistantId);
+    console.log('Public Key:', vapiConfig.publicKey.substring(0, 10) + '...');
+
+    // Option 1: Start with Assistant ID (recommended)
+    if (vapiConfig.assistantId && vapiConfig.assistantId !== 'your_vapi_assistant_id') {
+      console.log('Using existing assistant configuration');
+      
+      await vapi.start(vapiConfig.assistantId);
+      
+    } else {
+      // Option 2: Start with inline configuration
+      console.log('Using inline assistant configuration');
+      
+      const assistantConfig = {
+        name: "Farm Assistant",
+        firstMessage: "Hello! I'm your farm assistant. How can I help you today?",
+        
+        // Model configuration
+        model: {
+          provider: "openai",
+          model: "gpt-4o-mini", // Updated to newer model
+          temperature: 0.7,
+          messages: [
+            {
+              role: "system",
+              content: `You are a helpful farm assistant for Indian farmers. You help with:
+- Identifying crop diseases from descriptions
+- Suggesting organic treatments and solutions
+- Providing seasonal farming advice
+- Sharing traditional farming practices
+- Weather-related guidance
+- Community support
+
+Keep responses concise (2-3 sentences max). Be friendly and supportive.
+${userContext ? `User info: ${JSON.stringify(userContext)}` : ''}`
+            }
+          ]
+        },
+        
+        // Voice configuration
+        voice: {
+          provider: "playht",
+          voiceId: "jennifer"
+        },
+        
+        // Transcriber configuration
+        transcriber: {
+          provider: "deepgram",
+          model: "nova-2",
+          language: "en-US",
+          smartFormat: true
+        },
+        
+        // Optional: Add function calling
+        functions: [
+          {
+            name: "get_crop_analysis",
+            description: "Get recent crop disease analysis for the user",
+            parameters: {
+              type: "object",
+              properties: {
+                limit: {
+                  type: "number",
+                  description: "Number of recent analyses to fetch"
+                }
+              }
+            }
+          },
+          {
+            name: "search_solutions",
+            description: "Search for organic farming solutions",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The disease or problem to search solutions for"
+                }
+              },
+              required: ["query"]
+            }
+          }
+        ]
+      };
+
+      await vapi.start(assistantConfig);
+    }
+
+    console.log('✅ VAPI start call initiated');
+
+  } catch (error) {
+    console.error('❌ Error in startCall:', error);
+    
+    let errorMessage = 'Failed to start voice call.';
+    
+    if (error.name === 'NotAllowedError') {
+      errorMessage = '🎤 Microphone permission denied.\n\nPlease:\n1. Allow microphone access in your browser\n2. Reload the page and try again\n\nUsing text chat instead.';
+    } else if (error.name === 'NotFoundError') {
+      errorMessage = '🎤 No microphone found.\n\nPlease connect a microphone and try again.\n\nUsing text chat instead.';
+    } else if (error.message) {
+      errorMessage = `Error: ${error.message}\n\nUsing text chat instead.`;
+    }
+    
+    setError(errorMessage);
+    setIsLoading(false);
+    setTextMode(true);
+  }
+};
+
+// Also add this helper to check VAPI configuration
+const checkVAPIConfiguration = async () => {
+  console.log('🔍 Checking VAPI Configuration...');
+  console.log('Public Key:', vapiConfig?.publicKey ? '✅ Set' : '❌ Missing');
+  console.log('Assistant ID:', vapiConfig?.assistantId || '❌ Not set (will use inline config)');
+  
+  // Test VAPI SDK availability
+  try {
+    const { default: Vapi } = await import('@vapi-ai/web');
+    console.log('✅ VAPI SDK loaded successfully');
+    console.log('SDK Version:', Vapi.version || 'Unknown');
+  } catch (error) {
+    console.error('❌ Failed to load VAPI SDK:', error);
+    setError('VAPI SDK not installed. Run: npm install @vapi-ai/web');
+  }
+};
+
+  const endCall = () => {
+    if (vapiInstanceRef.current) {
+      vapiInstanceRef.current.stop();
+      vapiInstanceRef.current = null;
+      setIsConnected(false);
+    }
+  };
+
+  const toggleMute = () => {
+    if (vapiInstanceRef.current) {
+      vapiInstanceRef.current.setMuted(!isMuted);
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const handleFunctionCall = async (message) => {
+    try {
+      const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/vapi/function-call`, {
+        method: 'POST',
+        headers,
+        mode: 'cors',
+        body: JSON.stringify({ message })
+      });
+      
+      const data = await response.json();
+      
+      if (vapiInstanceRef.current && data.result) {
+        vapiInstanceRef.current.send({
+          type: 'function-call-result',
+          functionCallId: message.functionCallId,
+          result: data.result
+        });
+      }
+    } catch (error) {
+      console.error('Function call error:', error);
+    }
+  };
+
+  const addTranscript = (role, text) => {
+    setTranscript(prev => [...prev, {
       role,
-      content,
-      timestamp: new Date().toISOString(),
-      id: Date.now() + Math.random()
+      text,
+      timestamp: new Date()
     }]);
   };
 
-  const initializeVapi = async () => {
+  const handleQuickAction = async (query) => {
+    addTranscript('user', query);
+    setIsLoading(true);
+    
     try {
-      setInitStatus('Loading configuration...');
       const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
       
-      if (!token) {
-        setError('Please login first');
-        setInitStatus('Not logged in');
-        return;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Fetch config
-      const configRes = await fetch(`${API_BASE}/api/vapi/config`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await fetch(`${API_BASE_URL}/api/vapi/query`, {
+        method: 'POST',
+        headers,
+        mode: 'cors',
+        body: JSON.stringify({ query })
       });
       
-      if (!configRes.ok) {
-        throw new Error('Failed to fetch config');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const config = await configRes.json();
+      const data = await response.json();
+      addTranscript('assistant', data.response);
       
-      if (!config.publicKey || !config.assistantId) {
-        throw new Error('Invalid VAPI configuration');
+      if (data.suggested_actions) {
+        setSuggestedActions(data.suggested_actions);
       }
-      
-      setVapiConfig(config);
-
-      // Fetch user context
-      const contextRes = await fetch(`${API_BASE}/api/vapi/user-context`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (!contextRes.ok) {
-        throw new Error('Failed to fetch user context');
-      }
-
-      const context = await contextRes.json();
-      setUserContext(context);
-
-      setInitStatus('Initializing VAPI...');
-
-      // Import VAPI
-      const VapiModule = await import('@vapi-ai/web');
-      const Vapi = VapiModule.default;
-      
-      const vapiInstance = new Vapi(config.publicKey);
-      
-      // Event: Call Start
-      vapiInstance.on('call-start', () => {
-        console.log('Call started');
-        setIsCallActive(true);
-        setIsConnecting(false);
-        setError(null);
-        
-        if (callTimeoutRef.current) {
-          clearTimeout(callTimeoutRef.current);
-        }
-        
-        addMessage('system', `Connected! Ready to help you, ${context.userName}.`);
-      });
-      
-      // Event: Call End
-      vapiInstance.on('call-end', () => {
-        console.log('Call ended');
-        setIsCallActive(false);
-        setIsConnecting(false);
-        setIsSpeaking(false);
-        setVolumeLevel(0);
-        
-        if (callTimeoutRef.current) {
-          clearTimeout(callTimeoutRef.current);
-        }
-      });
-      
-      // Event: Speech Start
-      vapiInstance.on('speech-start', () => {
-        setIsSpeaking(true);
-      });
-      
-      // Event: Speech End
-      vapiInstance.on('speech-end', () => {
-        setIsSpeaking(false);
-      });
-      
-      // Event: Volume Level
-      vapiInstance.on('volume-level', (level) => {
-        setVolumeLevel(level);
-      });
-      
-      // Event: Message
-      vapiInstance.on('message', (message) => {
-        console.log('Message:', message.type, message);
-        
-        // Handle transcripts
-        if (message.type === 'transcript' && message.transcriptType === 'final') {
-          if (message.role === 'user' && message.transcript?.trim()) {
-            addMessage('user', message.transcript);
-          } else if (message.role === 'assistant' && message.transcript?.trim()) {
-            addMessage('assistant', message.transcript);
-          }
-        }
-        
-        // Handle function calls
-        if (message.type === 'function-call') {
-          console.log('Function call:', message.functionCall);
-        }
-        
-        // Handle conversation updates
-        if (message.type === 'conversation-update') {
-          console.log('Conversation update:', message);
-        }
-      });
-      
-      // Event: Error
-      vapiInstance.on('error', (error) => {
-        console.error('VAPI Error:', error);
-        
-        setIsConnecting(false);
-        setIsCallActive(false);
-        setIsSpeaking(false);
-        
-        // Parse error message
-        let errorMessage = 'Connection error';
-        
-        if (error.error?.message) {
-          errorMessage = error.error.message;
-        } else if (error.message) {
-          errorMessage = error.message;
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        }
-        
-        // Don't show "ended" errors for active calls
-        if (errorMessage.toLowerCase().includes('ended') && isCallActive) {
-          return;
-        }
-        
-        // Handle specific error types
-        if (error.type === 'start-method-error') {
-          if (error.error?.type === 'cors') {
-            errorMessage = 'Network error. Please check your internet connection and try again.';
-          } else if (error.error?.status === 401) {
-            errorMessage = 'Authentication failed. Please check your VAPI keys.';
-          } else if (error.error?.status === 404) {
-            errorMessage = 'Assistant not found. Please verify the Assistant ID.';
-          }
-        }
-        
-        setError(errorMessage);
-        addMessage('system', `Error: ${errorMessage}`);
-      });
-      
-      setVapi(vapiInstance);
-      setInitStatus('Ready');
-      console.log('VAPI initialized successfully');
-      
     } catch (error) {
-      console.error('Initialization failed:', error);
-      setError(error.message || 'Failed to initialize');
-      setInitStatus('Failed');
+      console.error('Query error:', error);
+      addTranscript('system', `Error: Could not connect to backend at ${API_BASE_URL}. Please check if the server is running.`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const startCall = async () => {
-    if (!vapi || !vapiConfig || !userContext) {
-      setError('Assistant not ready. Please refresh.');
-      return;
-    }
+  const handleTextSubmit = (e) => {
+    e.preventDefault();
+    if (!textInput.trim()) return;
     
-    setIsConnecting(true);
-    setError(null);
-    addMessage('system', 'Connecting...');
-    
-    try {
-      console.log('Starting call with assistant:', vapiConfig.assistantId);
-      
-      // Start the call
-      await vapi.start(vapiConfig.assistantId);
-      
-      console.log('Call start initiated');
-      
-      // Timeout to detect connection issues
-      callTimeoutRef.current = setTimeout(() => {
-        if (!isCallActive) {
-          console.warn('Connection timeout');
-          setIsConnecting(false);
-          setError('Connection timeout. Please try again.');
-          addMessage('system', 'Connection timeout. Please try again.');
-          vapi.stop();
-        }
-      }, 15000); // 15 second timeout
-      
-    } catch (error) {
-      console.error('Start call failed:', error);
-      setIsConnecting(false);
-      
-      let errorMsg = 'Failed to start call. ';
-      
-      if (error.message?.includes('permission') || error.message?.includes('NotAllowedError')) {
-        errorMsg += 'Please allow microphone access.';
-      } else if (error.message?.includes('NotFoundError')) {
-        errorMsg += 'No microphone detected.';
-      } else if (error.message?.includes('NotSupportedError')) {
-        errorMsg += 'Your browser may not support voice calls. Try Chrome or Edge.';
-      } else {
-        errorMsg += error.message || 'Please try again.';
-      }
-      
-      setError(errorMsg);
-      addMessage('system', `Error: ${errorMsg}`);
-    }
+    handleQuickAction(textInput);
+    setTextInput('');
   };
 
-  const endCall = () => {
-    if (vapi && isCallActive) {
-      console.log('Ending call');
-      vapi.stop();
-      addMessage('system', 'Call ended');
-    }
-  };
-
-  const clearMessages = () => {
-    setMessages([]);
-    setError(null);
-  };
-
-  const retryInit = () => {
-    setError(null);
-    setInitStatus('Initializing...');
-    initializeVapi();
-  };
+  const quickActions = [
+    { icon: '🌾', label: 'Analyze My Crop', query: 'Show me my recent crop analysis' },
+    { icon: '🌿', label: 'Organic Solutions', query: 'What organic treatments do you recommend?' },
+    { icon: '📅', label: 'Seasonal Advice', query: 'What should I plant this season?' },
+    { icon: '🎓', label: 'Video Tutorials', query: 'Show me farming video tutorials' }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold text-green-800 mb-2">
+    <>
+      {/* Floating Voice Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform duration-300 z-50 group"
+        >
+          <div className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-75"></div>
+          <Mic className="w-8 h-8 text-white relative z-10" />
+          <span className="absolute -top-10 right-0 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
             Voice Assistant
-          </h1>
-          <p className="text-gray-600">
-            Ask about farming in Telugu or English
-          </p>
-          {userContext && (
-            <p className="text-sm text-gray-500 mt-2">
-              Namaste <span className="font-medium">{userContext.userName}</span> from {userContext.location}
-            </p>
-          )}
-        </div>
+          </span>
+        </button>
+      )}
 
-        {/* Initialization Status */}
-        {initStatus !== 'Ready' && (
-          <div className={`border rounded-lg p-4 mb-6 ${
-            initStatus === 'Failed' ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-200'
-          }`}>
+      {/* Voice Agent Modal */}
+      {isOpen && (
+        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {initStatus === 'Failed' ? (
-                <AlertCircle className="w-5 h-5 text-red-600" />
-              ) : (
-                <Loader className="w-5 h-5 text-blue-600 animate-spin" />
-              )}
-              <div className="flex-1">
-                <p className={`font-medium ${initStatus === 'Failed' ? 'text-red-900' : 'text-blue-900'}`}>
-                  {initStatus}
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                isConnected ? 'bg-white animate-pulse' : 'bg-green-400'
+              }`}>
+                <Sparkles className={`w-6 h-6 ${isConnected ? 'text-green-600' : 'text-white'}`} />
+              </div>
+              <div>
+                <h3 className="text-white font-semibold">Farm Assistant</h3>
+                <p className="text-green-100 text-xs">
+                  {isConnected ? '🟢 Connected' : isLoading ? 'Connecting...' : textMode ? '💬 Text Mode' : 'Ready to help'}
                 </p>
-                {initStatus === 'Failed' && (
-                  <button
-                    onClick={retryInit}
-                    className="text-sm text-blue-600 hover:text-blue-700 mt-1"
-                  >
-                    Try Again
-                  </button>
-                )}
               </div>
             </div>
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                if (isConnected) endCall();
+                setError(null);
+                setTranscript([]);
+              }}
+              className="text-white hover:bg-white/20 p-2 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        )}
 
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-red-900 font-semibold">Error</p>
-                <p className="text-red-700 text-sm">{error}</p>
+          {/* Error Message */}
+          {error && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 m-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-yellow-800 whitespace-pre-line">{error}</p>
               </div>
-              <button
-                onClick={() => setError(null)}
-                className="text-red-400 hover:text-red-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Main Call Interface */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-6">
-          <div className="flex flex-col items-center space-y-6">
-            
-            {/* Call Button */}
-            <div className="relative">
-              <button
-                onClick={isCallActive ? endCall : startCall}
-                disabled={isConnecting || initStatus !== 'Ready'}
-                className={`w-40 h-40 rounded-full flex items-center justify-center transition-all shadow-2xl ${
-                  isConnecting ? 'bg-gray-400' :
-                  isCallActive ? 'bg-red-500 hover:bg-red-600' :
-                  'bg-green-500 hover:bg-green-600'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {isConnecting ? (
-                  <Loader className="w-20 h-20 text-white animate-spin" />
-                ) : isCallActive ? (
-                  <PhoneOff className="w-20 h-20 text-white" />
-                ) : (
-                  <Phone className="w-20 h-20 text-white" />
-                )}
-              </button>
-              
-              {isCallActive && (
-                <div className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-20" />
-              )}
-              
-              {/* Volume indicator */}
-              {isCallActive && volumeLevel > 0 && (
-                <div 
-                  className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-gray-200 rounded-full overflow-hidden"
-                >
-                  <div 
-                    className="h-full bg-green-500 transition-all duration-100"
-                    style={{ width: `${Math.min(volumeLevel * 100, 100)}%` }}
-                  />
+          {/* Transcript Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            {transcript.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  {textMode ? <Send className="w-10 h-10 text-green-600" /> : <Mic className="w-10 h-10 text-green-600" />}
                 </div>
-              )}
-            </div>
-
-            {/* Status Text */}
-            <div className="text-center">
-              <p className="text-3xl font-bold text-gray-800">
-                {isConnecting ? 'Connecting...' :
-                 isCallActive ? isSpeaking ? 'Speaking...' : 'Listening...' :
-                 'Tap to Start'}
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                {isCallActive ? 'Speak naturally in Telugu or English' : 
-                 initStatus === 'Ready' ? 'Ready to help you' : initStatus}
-              </p>
-            </div>
-
-            {/* Call Indicators */}
-            {isCallActive && (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-red-50 px-4 py-2 rounded-full">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-sm font-medium text-red-600">LIVE</span>
-                </div>
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                  Farm Assistant
+                </h4>
+                <p className="text-gray-600 text-sm mb-6">
+                  Ask me about crop diseases, organic solutions, seasonal advice, and more!
+                </p>
                 
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-                  isSpeaking ? 'bg-green-50' : 'bg-gray-50'
-                }`}>
-                  {isSpeaking ? 
-                    <Mic className="w-4 h-4 text-green-600" /> : 
-                    <MicOff className="w-4 h-4 text-gray-400" />
-                  }
-                  <span className={`text-sm font-medium ${
-                    isSpeaking ? 'text-green-600' : 'text-gray-400'
-                  }`}>
-                    {isSpeaking ? 'Speaking' : 'Idle'}
-                  </span>
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
+                  {quickActions.map((action, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleQuickAction(action.query)}
+                      disabled={isLoading}
+                      className="bg-white hover:bg-green-50 border border-gray-200 rounded-lg p-3 text-left transition-colors disabled:opacity-50"
+                    >
+                      <div className="text-2xl mb-1">{action.icon}</div>
+                      <div className="text-xs font-medium text-gray-700">{action.label}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Conversation History */}
-        {messages.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Conversation ({messages.length})
-                </h3>
-              </div>
-              <button 
-                onClick={clearMessages} 
-                className="text-gray-400 hover:text-red-500 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-              {messages.map((msg) => (
-                <div 
-                  key={msg.id} 
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            ) : (
+              transcript.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${
+                    item.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
                 >
-                  <div className={`max-w-[80%] p-4 rounded-2xl shadow-sm ${
-                    msg.role === 'user' ? 'bg-green-500 text-white' :
-                    msg.role === 'assistant' ? 'bg-blue-100 text-gray-800' :
-                    'bg-yellow-50 text-yellow-800 w-full text-center border border-yellow-200'
-                  }`}>
-                    {msg.role !== 'system' && (
-                      <p className="text-xs font-medium mb-1 opacity-70">
-                        {msg.role === 'user' ? 'You' : 'Assistant'}
-                      </p>
-                    )}
-                    <p className="text-sm leading-relaxed">{msg.content}</p>
-                    <p className="text-xs opacity-50 mt-1">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      item.role === 'user'
+                        ? 'bg-green-600 text-white'
+                        : item.role === 'assistant'
+                        ? 'bg-white border border-gray-200 text-gray-900'
+                        : 'bg-blue-50 text-blue-900 text-center text-sm'
+                    }`}
+                  >
+                    <p className="text-sm">{item.text}</p>
+                    <p className={`text-xs mt-1 ${
+                      item.role === 'user' ? 'text-green-100' : 'text-gray-500'
+                    }`}>
+                      {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+              ))
+            )}
+            
+            {/* Suggested Actions */}
+            {suggestedActions.length > 0 && (
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <p className="text-xs font-medium text-gray-700 mb-2">Suggested Actions:</p>
+                <div className="space-y-2">
+                  {suggestedActions.map((action, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => window.location.href = action.route}
+                      className="w-full flex items-center justify-between bg-green-50 hover:bg-green-100 text-green-800 px-3 py-2 rounded-lg text-sm transition-colors"
+                    >
+                      <span>{action.label}</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div ref={transcriptEndRef} />
           </div>
-        )}
 
-        {/* Help Text */}
-        {!isCallActive && messages.length === 0 && initStatus === 'Ready' && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 mt-6">
-            <h3 className="font-bold text-gray-800 mb-3">How to use:</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                <span>Tap the microphone button to start</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                <span>Speak clearly about your crop issues</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                <span>Get instant advice in Telugu or English</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                <span>Ask about diseases, treatments, weather, and more</span>
-              </li>
-            </ul>
+          {/* Controls */}
+          <div className="bg-white border-t border-gray-200 p-4">
+            {textMode ? (
+              <div>
+                <form onSubmit={handleTextSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    placeholder="Type your question..."
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!textInput.trim() || isLoading}
+                    className="bg-green-600 text-white px-6 py-3 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isLoading ? (
+                      <Loader className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </form>
+                {vapiConfig?.publicKey && vapiConfig.publicKey !== 'your_vapi_public_key' && (
+                  <button
+                    onClick={() => setTextMode(false)}
+                    className="w-full mt-2 text-sm text-gray-600 hover:text-gray-900 py-2"
+                  >
+                    Switch to voice mode
+                  </button>
+                )}
+              </div>
+            ) : !isConnected ? (
+              <button
+                onClick={startCall}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-300 flex items-center justify-center gap-3 font-semibold disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Phone className="w-5 h-5" />
+                    Start Voice Call
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  onClick={toggleMute}
+                  className={`flex-1 ${
+                    isMuted ? 'bg-yellow-500' : 'bg-gray-200'
+                  } text-gray-900 py-3 rounded-xl hover:bg-opacity-80 transition-colors flex items-center justify-center gap-2 font-medium`}
+                >
+                  {isMuted ? (
+                    <>
+                      <MicOff className="w-5 h-5" />
+                      Unmute
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-5 h-5" />
+                      Mute
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={endCall}
+                  className="flex-1 bg-red-500 text-white py-3 rounded-xl hover:bg-red-600 transition-colors flex items-center justify-center gap-2 font-medium"
+                >
+                  <Phone className="w-5 h-5 rotate-135" />
+                  End Call
+                </button>
+              </div>
+            )}
+            
+            {isConnected && (
+              <div className="mt-3 text-center">
+                <div className="inline-flex items-center gap-2 text-sm text-gray-600">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  Listening...
+                </div>
+              </div>
+            )}
+
+            {!textMode && !isConnected && vapiConfig?.publicKey && vapiConfig.publicKey !== 'your_vapi_public_key' && (
+              <button
+                onClick={() => setTextMode(true)}
+                className="w-full mt-2 text-sm text-gray-600 hover:text-gray-900 py-2"
+              >
+                Use text chat instead
+              </button>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+
+          {/* Privacy Notice */}
+          <div className="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center border-t">
+            🔒 Your conversations are private and secure
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
-export default VoiceAssistant;
+export default VoiceAgent;
