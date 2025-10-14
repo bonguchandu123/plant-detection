@@ -2,11 +2,121 @@ import React, { useState, useEffect } from 'react';
 import { 
   Camera, Upload, AlertCircle, Check, Star, Phone, Loader, 
   History, Share2, MessageCircle, X, TrendingUp, Activity,
-  Image as ImageIcon, Tag, FileText
+  Image as ImageIcon, Tag, FileText, Globe
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const API_BASE = 'http://localhost:8000';
+
+// Telugu translations
+const translations = {
+  english: {
+    title: "Crop Disease Analysis",
+    subtitle: "AI-powered disease detection and expert guidance",
+    analyzeYourCrop: "Analyze Your Crop",
+    selectCropType: "Select Crop Type",
+    uploadOrCapture: "Upload or capture crop image",
+    chooseImage: "Choose Image",
+    analyzing: "Analyzing with AI...",
+    analyzeCropDisease: "Analyze Crop Disease",
+    analyzeAnother: "Analyze Another",
+    shareToCommunity: "Share to Community",
+    consultExpert: "Consult Expert",
+    diseaseDetected: "Disease Detected",
+    healthyCrop: "Healthy Crop",
+    aiAnalysisComplete: "AI Analysis Complete",
+    diseaseIssue: "Disease/Issue",
+    aiConfidence: "AI Confidence",
+    aiExpertGuidance: "AI Expert Guidance",
+    tipsForBetterResults: "Tips for Better Results",
+    recentAnalyses: "Recent Analyses",
+    noAnalysesYet: "No analyses yet",
+    uploadToStart: "Upload an image to get started",
+    shareToCommunityTitle: "Share to Community",
+    postTitle: "Post Title",
+    description: "Description",
+    tags: "Tags",
+    addTag: "Add a tag and press Enter",
+    add: "Add",
+    analysisPreview: "Analysis Preview",
+    cancel: "Cancel",
+    shareToForum: "Share to Forum",
+    sharing: "Sharing...",
+    success: "Success!",
+    sharedToForum: "Analysis shared to community forum",
+    error: "Error",
+    reset: "Reset",
+    refresh: "Refresh",
+    loading: "Loading...",
+    tips: [
+      'Take clear photos in natural daylight',
+      'Focus on the affected area of the plant',
+      'Capture close-up images for detail',
+      'Avoid blurry or dark images'
+    ],
+    crops: {
+      rice: "Rice (వరి)",
+      tomato: "Tomato (టమాటా)",
+      potato: "Potato (బంగాళాదుంప)",
+      cotton: "Cotton (పత్తి)",
+      wheat: "Wheat (గోధుమ)",
+      millet: "Millet (సజ్జలు)"
+    }
+  },
+  telugu: {
+    title: "పంట వ్యాధి విశ్లేషణ",
+    subtitle: "AI-శక్తితో వ్యాధి గుర్తింపు మరియు నిపుణుల మార్గదర్శకత్వం",
+    analyzeYourCrop: "మీ పంటను విశ్లేషించండి",
+    selectCropType: "పంట రకాన్ని ఎంచుకోండి",
+    uploadOrCapture: "పంట చిత్రాన్ని అప్‌లోడ్ లేదా క్యాప్చర్ చేయండి",
+    chooseImage: "చిత్రాన్ని ఎంచుకోండి",
+    analyzing: "AI తో విశ్లేషిస్తోంది...",
+    analyzeCropDisease: "పంట వ్యాధిని విశ్లేషించండి",
+    analyzeAnother: "మరొకటి విశ్లేషించండి",
+    shareToCommunity: "సంఘంతో పంచుకోండి",
+    consultExpert: "నిపుణుడిని సంప్రదించండి",
+    diseaseDetected: "వ్యాధి కనుగొనబడింది",
+    healthyCrop: "ఆరోగ్యకరమైన పంట",
+    aiAnalysisComplete: "AI విశ్లేషణ పూర్తయింది",
+    diseaseIssue: "వ్యాధి/సమస్య",
+    aiConfidence: "AI విశ్వాసం",
+    aiExpertGuidance: "AI నిపుణుల మార్గదర్శకత్వం",
+    tipsForBetterResults: "మెరుగైన ఫలితాల కోసం చిట్కాలు",
+    recentAnalyses: "ఇటీవలి విశ్లేషణలు",
+    noAnalysesYet: "ఇంకా విశ్లేషణలు లేవు",
+    uploadToStart: "ప్రారంభించడానికి చిత్రాన్ని అప్‌లోడ్ చేయండి",
+    shareToCommunityTitle: "సంఘంతో పంచుకోండి",
+    postTitle: "పోస్ట్ శీర్షిక",
+    description: "వివరణ",
+    tags: "ట్యాగ్‌లు",
+    addTag: "ట్యాగ్ జోడించి Enter నొక్కండి",
+    add: "జోడించు",
+    analysisPreview: "విశ్లేషణ ప్రివ్యూ",
+    cancel: "రద్దు చేయి",
+    shareToForum: "ఫోరమ్‌కు పంచుకోండి",
+    sharing: "పంచుకుంటోంది...",
+    success: "విజయం!",
+    sharedToForum: "విశ్లేషణ సంఘ ఫోరమ్‌కు పంచుకోబడింది",
+    error: "లోపం",
+    reset: "రీసెట్",
+    refresh: "రిఫ్రెష్",
+    loading: "లోడ్ అవుతోంది...",
+    tips: [
+      'సహజ పగటి వెలుతురులో స్పష్టమైన ఫోటోలు తీయండి',
+      'మొక్క యొక్క ప్రభావిత ప్రాంతంపై దృష్టి పెట్టండి',
+      'వివరాల కోసం క్లోజ్-అప్ చిత్రాలను క్యాప్చర్ చేయండి',
+      'అస్పష్టమైన లేదా చీకటి చిత్రాలను నివారించండి'
+    ],
+    crops: {
+      rice: "వరి",
+      tomato: "టమాటా",
+      potato: "బంగాళాదుంప",
+      cotton: "పత్తి",
+      wheat: "గోధుమ",
+      millet: "సజ్జలు"
+    }
+  }
+};
 
 const AnalyzeCropPage = () => {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -27,11 +137,36 @@ const AnalyzeCropPage = () => {
   const [newTag, setNewTag] = useState('');
   const [sharing, setSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
-  const { getToken } = useAuth();
+  const [language, setLanguage] = useState('telugu'); // Default to Telugu
+  const { getToken, user } = useAuth();
+
+  const t = translations[language];
 
   useEffect(() => {
     loadSavedAnalyses();
-  }, []);
+    // Load user's language preference
+    if (user?.language_preference) {
+      setLanguage(user.language_preference === 'telugu' ? 'telugu' : 'english');
+    }
+  }, [user]);
+
+  const toggleLanguage = () => {
+    const newLang = language === 'english' ? 'telugu' : 'english';
+    setLanguage(newLang);
+    
+    // Update user preference in backend
+    const token = getToken();
+    if (token) {
+      fetch(`${API_BASE}/api/users/language`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ language: newLang })
+      }).catch(err => console.error('Failed to update language:', err));
+    }
+  };
 
   const loadSavedAnalyses = async () => {
     const token = getToken();
@@ -60,12 +195,12 @@ const AnalyzeCropPage = () => {
     const file = e.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
+        setError(language === 'telugu' ? 'దయచేసి చిత్ర ఫైల్‌ను ఎంచుకోండి' : 'Please select an image file');
         return;
       }
       
       if (file.size > 10 * 1024 * 1024) {
-        setError('Image size should be less than 10MB');
+        setError(language === 'telugu' ? 'చిత్ర పరిమాణం 10MB కంటే తక్కువగా ఉండాలి' : 'Image size should be less than 10MB');
         return;
       }
       
@@ -79,13 +214,13 @@ const AnalyzeCropPage = () => {
 
   const analyzeImage = async () => {
     if (!selectedFile) {
-      setError('Please select an image first');
+      setError(language === 'telugu' ? 'దయచేసి ముందుగా చిత్రాన్ని ఎంచుకోండి' : 'Please select an image first');
       return;
     }
 
     const token = getToken();
     if (!token) {
-      setError('Please login first');
+      setError(language === 'telugu' ? 'దయచేసి ముందుగా లాగిన్ అవ్వండి' : 'Please login first');
       return;
     }
 
@@ -109,11 +244,11 @@ const AnalyzeCropPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Analysis failed');
+        throw new Error(data.detail || (language === 'telugu' ? 'విశ్లేషణ విफల' : 'Analysis failed'));
       }
 
       setResult({
-        disease: data.diagnosis?.disease || 'Unknown',
+        disease: data.diagnosis?.disease || (language === 'telugu' ? 'తెలియని' : 'Unknown'),
         confidence: data.diagnosis?.confidence || 0,
         severity: 'medium',
         isHealthy: data.diagnosis?.disease?.toLowerCase().includes('healthy'),
@@ -123,17 +258,22 @@ const AnalyzeCropPage = () => {
         cropType: cropType
       });
 
+      const cropName = t.crops[cropType] || cropType;
       setShareData({
-        title: `Help needed: ${data.diagnosis?.disease || 'Unknown disease'} in ${cropType}`,
-        content: `I detected ${data.diagnosis?.disease || 'an issue'} in my ${cropType} crop with ${((data.diagnosis?.confidence || 0) * 100).toFixed(0)}% confidence. Has anyone dealt with this before? Looking for advice and solutions.`,
-        tags: [cropType, 'disease-help', data.diagnosis?.disease?.toLowerCase().replace(/\s+/g, '-') || 'unknown'],
+        title: language === 'telugu' 
+          ? `సహాయం కావాలి: ${cropName}లో ${data.diagnosis?.disease || 'తెలియని వ్యాధి'}`
+          : `Help needed: ${data.diagnosis?.disease || 'Unknown disease'} in ${cropType}`,
+        content: language === 'telugu'
+          ? `నా ${cropName} పంటలో ${data.diagnosis?.disease || 'ఒక సమస్య'} కనుగొన్నాను, ${((data.diagnosis?.confidence || 0) * 100).toFixed(0)}% విశ్వాసంతో. ఎవరైనా ఇంతకు ముందు దీనిని ఎదుర్కొన్నారా? సలహా మరియు పరిష్కారాల కోసం చూస్తున్నాను.`
+          : `I detected ${data.diagnosis?.disease || 'an issue'} in my ${cropType} crop with ${((data.diagnosis?.confidence || 0) * 100).toFixed(0)}% confidence. Has anyone dealt with this before? Looking for advice and solutions.`,
+        tags: [cropType, language === 'telugu' ? 'వ్యాధి-సహాయం' : 'disease-help', data.diagnosis?.disease?.toLowerCase().replace(/\s+/g, '-') || 'unknown'],
         mediaUrls: [data.image_url]
       });
 
       loadSavedAnalyses();
     } catch (err) {
       console.error('Analysis error:', err);
-      setError(err.message || 'Failed to analyze image. Please try again.');
+      setError(err.message || (language === 'telugu' ? 'చిత్రాన్ని విశ్లేషించడంలో విఫలమైంది. దయచేసి మళ్ళీ ప్రయత్నించండి.' : 'Failed to analyze image. Please try again.'));
     } finally {
       setAnalyzing(false);
     }
@@ -141,13 +281,13 @@ const AnalyzeCropPage = () => {
 
   const handleShareToCommunity = async () => {
     if (!result?.analysisId) {
-      setError('No analysis to share');
+      setError(language === 'telugu' ? 'పంచుకోవడానికి విశ్లేషణ లేదు' : 'No analysis to share');
       return;
     }
 
     const token = getToken();
     if (!token) {
-      setError('Please login first');
+      setError(language === 'telugu' ? 'దయచేసి ముందుగా లాగిన్ అవ్వండి' : 'Please login first');
       return;
     }
 
@@ -172,7 +312,7 @@ const AnalyzeCropPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Failed to share');
+        throw new Error(data.detail || (language === 'telugu' ? 'పంచుకోవడం విఫలమైంది' : 'Failed to share'));
       }
 
       setShareSuccess(true);
@@ -183,7 +323,7 @@ const AnalyzeCropPage = () => {
       }, 2000);
     } catch (err) {
       console.error('Share error:', err);
-      setError(err.message || 'Failed to share to community');
+      setError(err.message || (language === 'telugu' ? 'సంఘంతో పంచుకోవడం విఫలమైంది' : 'Failed to share to community'));
     } finally {
       setSharing(false);
     }
@@ -220,7 +360,7 @@ const AnalyzeCropPage = () => {
       if (response.ok) {
         const data = await response.json();
         setResult({
-          disease: data.disease || 'Unknown',
+          disease: data.disease || (language === 'telugu' ? 'తెలియని' : 'Unknown'),
           confidence: data.confidence || 0,
           severity: 'medium',
           isHealthy: data.disease?.toLowerCase().includes('healthy'),
@@ -231,10 +371,15 @@ const AnalyzeCropPage = () => {
         });
         setSelectedImage(data.image_url);
         
+        const cropName = t.crops[cropType] || cropType;
         setShareData({
-          title: `Help needed: ${data.disease || 'Unknown disease'} in ${cropType}`,
-          content: `I detected ${data.disease || 'an issue'} in my ${cropType} crop. Has anyone dealt with this before? Looking for advice.`,
-          tags: [cropType, 'disease-help', data.disease?.toLowerCase().replace(/\s+/g, '-') || 'unknown'],
+          title: language === 'telugu'
+            ? `సహాయం కావాలి: ${cropName}లో ${data.disease || 'తెలియని వ్యాధి'}`
+            : `Help needed: ${data.disease || 'Unknown disease'} in ${cropType}`,
+          content: language === 'telugu'
+            ? `నా ${cropName} పంటలో ${data.disease || 'ఒక సమస్య'} కనుగొన్నాను. ఎవరైనా ఇంతకు ముందు దీనిని ఎదుర్కొన్నారా? సలహా కోసం చూస్తున్నాను.`
+            : `I detected ${data.disease || 'an issue'} in my ${cropType} crop. Has anyone dealt with this before? Looking for advice.`,
+          tags: [cropType, language === 'telugu' ? 'వ్యాధి-సహాయం' : 'disease-help', data.disease?.toLowerCase().replace(/\s+/g, '-') || 'unknown'],
           mediaUrls: [data.image_url]
         });
       }
@@ -255,9 +400,22 @@ const AnalyzeCropPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Language Toggle */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleLanguage}
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-md hover:shadow-lg transition-all border-2 border-blue-200"
+          >
+            <Globe className="w-5 h-5 text-blue-600" />
+            <span className="font-semibold text-gray-700">
+              {language === 'english' ? 'తెలుగు' : 'English'}
+            </span>
+          </button>
+        </div>
+
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Crop Disease Analysis</h1>
-          <p className="text-gray-600">AI-powered disease detection and expert guidance</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{t.title}</h1>
+          <p className="text-gray-600">{t.subtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -266,33 +424,30 @@ const AnalyzeCropPage = () => {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                   <Camera className="w-7 h-7 text-green-600" />
-                  Analyze Your Crop
+                  {t.analyzeYourCrop}
                 </h2>
                 {selectedImage && (
                   <button
                     onClick={resetAnalysis}
                     className="text-sm text-gray-600 hover:text-gray-900 font-medium"
                   >
-                    Reset
+                    {t.reset}
                   </button>
                 )}
               </div>
               
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Select Crop Type
+                  {t.selectCropType}
                 </label>
                 <select
                   value={cropType}
                   onChange={(e) => setCropType(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
                 >
-                  <option value="rice">Rice (వరి)</option>
-                  <option value="tomato">Tomato (టమాటా)</option>
-                  <option value="potato">Potato (బంగాళాదుంప)</option>
-                  <option value="cotton">Cotton (పత్తి)</option>
-                  <option value="wheat">Wheat (గోధుమ)</option>
-                  <option value="millet">Millet (సజ్జలు)</option>
+                  {Object.entries(t.crops).map(([key, value]) => (
+                    <option key={key} value={key}>{value}</option>
+                  ))}
                 </select>
               </div>
 
@@ -301,7 +456,7 @@ const AnalyzeCropPage = () => {
                   <div className="flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-red-900 font-semibold">Error</p>
+                      <p className="text-red-900 font-semibold">{t.error}</p>
                       <p className="text-red-700 text-sm">{error}</p>
                     </div>
                   </div>
@@ -313,8 +468,8 @@ const AnalyzeCropPage = () => {
                   <div className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-green-900 font-semibold">Success!</p>
-                      <p className="text-green-700 text-sm">Analysis shared to community forum</p>
+                      <p className="text-green-900 font-semibold">{t.success}</p>
+                      <p className="text-green-700 text-sm">{t.sharedToForum}</p>
                     </div>
                   </div>
                 </div>
@@ -340,11 +495,11 @@ const AnalyzeCropPage = () => {
                           <ImageIcon className="w-10 h-10 text-green-600" />
                         </div>
                       </div>
-                      <p className="text-gray-900 text-lg font-semibold mb-2">Upload or capture crop image</p>
-                      <p className="text-gray-500 mb-6">JPG, PNG or JPEG (max 10MB)</p>
+                      <p className="text-gray-900 text-lg font-semibold mb-2">{t.uploadOrCapture}</p>
+                      <p className="text-gray-500 mb-6">JPG, PNG {language === 'telugu' ? 'లేదా' : 'or'} JPEG ({language === 'telugu' ? 'గరిష్టం' : 'max'} 10MB)</p>
                       <div className="inline-flex items-center gap-2 bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl">
                         <Upload className="w-5 h-5" />
-                        <span>Choose Image</span>
+                        <span>{t.chooseImage}</span>
                       </div>
                     </label>
                     <input
@@ -368,12 +523,12 @@ const AnalyzeCropPage = () => {
                   {analyzing ? (
                     <>
                       <Loader className="w-6 h-6 animate-spin" />
-                      <span>Analyzing with AI...</span>
+                      <span>{t.analyzing}</span>
                     </>
                   ) : (
                     <>
                       <Activity className="w-6 h-6" />
-                      <span>Analyze Crop Disease</span>
+                      <span>{t.analyzeCropDisease}</span>
                     </>
                   )}
                 </button>
@@ -400,20 +555,20 @@ const AnalyzeCropPage = () => {
                       )}
                       <div>
                         <h3 className="text-2xl font-bold text-gray-900">
-                          {result.isHealthy ? 'Healthy Crop' : 'Disease Detected'}
+                          {result.isHealthy ? t.healthyCrop : t.diseaseDetected}
                         </h3>
-                        <p className="text-gray-600 text-sm mt-1">AI Analysis Complete</p>
+                        <p className="text-gray-600 text-sm mt-1">{t.aiAnalysisComplete}</p>
                       </div>
                     </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white bg-opacity-70 rounded-xl p-4">
-                      <p className="text-sm text-gray-600 mb-2 font-medium">Disease/Issue</p>
+                      <p className="text-sm text-gray-600 mb-2 font-medium">{t.diseaseIssue}</p>
                       <p className="text-xl font-bold text-gray-900">{result.disease}</p>
                     </div>
                     <div className="bg-white bg-opacity-70 rounded-xl p-4">
-                      <p className="text-sm text-gray-600 mb-2 font-medium">AI Confidence</p>
+                      <p className="text-sm text-gray-600 mb-2 font-medium">{t.aiConfidence}</p>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 bg-gray-200 rounded-full h-3">
                           <div 
@@ -429,18 +584,17 @@ const AnalyzeCropPage = () => {
                   </div>
                 </div>
 
-               {result.aiGuidance && (
+                {result.aiGuidance && (
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 shadow-lg">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                         <Star className="w-6 h-6 text-white" />
                       </div>
-                      <h4 className="text-xl font-bold text-blue-900">AI Expert Guidance</h4>
+                      <h4 className="text-xl font-bold text-blue-900">{t.aiExpertGuidance}</h4>
                     </div>
                     <div className="bg-white bg-opacity-70 rounded-xl p-4 max-h-80 overflow-y-auto">
                       <div className="text-gray-800 text-sm leading-relaxed space-y-3">
                         {result.aiGuidance.split('\n').map((line, idx) => {
-                          // Handle bold text with **
                           const boldRegex = /\*\*(.*?)\*\*/g;
                           const hasBold = boldRegex.test(line);
                           
@@ -462,7 +616,6 @@ const AnalyzeCropPage = () => {
                             );
                           }
                           
-                          // Handle bullet points
                           if (line.trim().startsWith('•') || line.trim().startsWith('-') || line.trim().startsWith('*')) {
                             return (
                               <div key={idx} className="flex gap-2 ml-2">
@@ -472,7 +625,6 @@ const AnalyzeCropPage = () => {
                             );
                           }
                           
-                          // Handle numbered lists
                           if (/^\d+\./.test(line.trim())) {
                             return (
                               <div key={idx} className="flex gap-2 ml-2">
@@ -482,7 +634,6 @@ const AnalyzeCropPage = () => {
                             );
                           }
                           
-                          // Handle section headers (lines that end with :)
                           if (line.trim().endsWith(':') && line.trim().length > 3) {
                             return (
                               <div key={idx} className="font-bold text-blue-900 mt-3 mb-1">
@@ -491,7 +642,6 @@ const AnalyzeCropPage = () => {
                             );
                           }
                           
-                          // Regular text
                           if (line.trim()) {
                             return <div key={idx}>{line}</div>;
                           }
@@ -502,25 +652,26 @@ const AnalyzeCropPage = () => {
                     </div>
                   </div>
                 )}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
                     onClick={resetAnalysis}
                     className="py-3 px-6 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all border-2 border-gray-200 hover:border-gray-300"
                   >
-                    Analyze Another
+                    {t.analyzeAnother}
                   </button>
                   <button
                     onClick={() => setShareModal(true)}
                     className="py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                   >
                     <Share2 className="w-5 h-5" />
-                    <span>Share to Community</span>
+                    <span>{t.shareToCommunity}</span>
                   </button>
                   <button
                     className="py-3 px-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                   >
                     <Phone className="w-5 h-5" />
-                    <span>Consult Expert</span>
+                    <span>{t.consultExpert}</span>
                   </button>
                 </div>
               </div>
@@ -529,15 +680,10 @@ const AnalyzeCropPage = () => {
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-6 shadow-lg">
               <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2 text-lg">
                 <TrendingUp className="w-6 h-6" />
-                <span>Tips for Better Results</span>
+                <span>{t.tipsForBetterResults}</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {[
-                  'Take clear photos in natural daylight',
-                  'Focus on the affected area of the plant',
-                  'Capture close-up images for detail',
-                  'Avoid blurry or dark images'
-                ].map((tip, idx) => (
+                {t.tips.map((tip, idx) => (
                   <div key={idx} className="flex items-start gap-3 bg-white bg-opacity-70 rounded-xl p-3">
                     <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                       <Check className="w-4 h-4 text-white" />
@@ -554,14 +700,14 @@ const AnalyzeCropPage = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <History className="w-6 h-6 text-purple-600" />
-                  <span>Recent Analyses</span>
+                  <span>{t.recentAnalyses}</span>
                 </h3>
                 <button
                   onClick={loadSavedAnalyses}
                   disabled={loadingHistory}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
-                  {loadingHistory ? 'Loading...' : 'Refresh'}
+                  {loadingHistory ? t.loading : t.refresh}
                 </button>
               </div>
 
@@ -574,8 +720,8 @@ const AnalyzeCropPage = () => {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <History className="w-8 h-8 text-gray-300" />
                   </div>
-                  <p className="text-gray-500 font-medium">No analyses yet</p>
-                  <p className="text-gray-400 text-sm mt-1">Upload an image to get started</p>
+                  <p className="text-gray-500 font-medium">{t.noAnalysesYet}</p>
+                  <p className="text-gray-400 text-sm mt-1">{t.uploadToStart}</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
@@ -593,7 +739,7 @@ const AnalyzeCropPage = () => {
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-gray-900 truncate mb-1">
-                            {analysis.disease || 'Analysis'}
+                            {analysis.disease || (language === 'telugu' ? 'విశ్లేషణ' : 'Analysis')}
                           </p>
                           <div className="flex items-center gap-2 mb-1">
                             <div className="flex-1 bg-gray-200 rounded-full h-1.5">
@@ -607,7 +753,7 @@ const AnalyzeCropPage = () => {
                             </span>
                           </div>
                           <p className="text-xs text-gray-500">
-                            {new Date(analysis.uploaded_at).toLocaleDateString('en-US', {
+                            {new Date(analysis.uploaded_at).toLocaleDateString(language === 'telugu' ? 'te-IN' : 'en-US', {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric'
@@ -633,7 +779,7 @@ const AnalyzeCropPage = () => {
                   <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                     <Share2 className="w-6 h-6 text-white" />
                   </div>
-                  Share to Community
+                  {t.shareToCommunityTitle}
                 </h2>
                 <button
                   onClick={() => setShareModal(false)}
@@ -648,35 +794,35 @@ const AnalyzeCropPage = () => {
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-gray-500" />
-                  Post Title
+                  {t.postTitle}
                 </label>
                 <input
                   type="text"
                   value={shareData.title}
                   onChange={(e) => setShareData(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                  placeholder="Give your post a descriptive title"
+                  placeholder={language === 'telugu' ? 'మీ పోస్ట్‌కు వివరణాత్మక శీర్షిక ఇవ్వండి' : 'Give your post a descriptive title'}
                 />
               </div>
 
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                   <MessageCircle className="w-4 h-4 text-gray-500" />
-                  Description
+                  {t.description}
                 </label>
                 <textarea
                   value={shareData.content}
                   onChange={(e) => setShareData(prev => ({ ...prev, content: e.target.value }))}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
                   rows="6"
-                  placeholder="Describe your issue and what help you need..."
+                  placeholder={language === 'telugu' ? 'మీ సమస్యను మరియు మీకు కావలసిన సహాయాన్ని వివరించండి...' : 'Describe your issue and what help you need...'}
                 />
               </div>
 
               <div>
                 <label className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                   <Tag className="w-4 h-4 text-gray-500" />
-                  Tags
+                  {t.tags}
                 </label>
                 <div className="flex gap-2 mb-3">
                   <input
@@ -685,13 +831,13 @@ const AnalyzeCropPage = () => {
                     onChange={(e) => setNewTag(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addTag()}
                     className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    placeholder="Add a tag and press Enter"
+                    placeholder={t.addTag}
                   />
                   <button
                     onClick={addTag}
                     className="px-6 py-2 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors"
                   >
-                    Add
+                    {t.add}
                   </button>
                 </div>
                 <div className="flex gap-2 flex-wrap">
@@ -714,7 +860,7 @@ const AnalyzeCropPage = () => {
 
               {result && (
                 <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-5 border-2 border-gray-200">
-                  <p className="text-sm font-bold text-gray-700 mb-3">Analysis Preview:</p>
+                  <p className="text-sm font-bold text-gray-700 mb-3">{t.analysisPreview}:</p>
                   <div className="flex gap-4 bg-white rounded-lg p-3 shadow-sm">
                     <img 
                       src={result.imageUrl} 
@@ -724,7 +870,7 @@ const AnalyzeCropPage = () => {
                     <div className="flex-1">
                       <p className="text-sm font-bold text-gray-900 mb-1">{result.disease}</p>
                       <p className="text-xs text-gray-600 mb-2">
-                        Confidence: {(result.confidence * 100).toFixed(0)}%
+                        {language === 'telugu' ? 'విశ్వాసం' : 'Confidence'}: {(result.confidence * 100).toFixed(0)}%
                       </p>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -748,7 +894,7 @@ const AnalyzeCropPage = () => {
                   disabled={sharing}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50 transition-all"
                 >
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button
                   onClick={handleShareToCommunity}
@@ -758,12 +904,12 @@ const AnalyzeCropPage = () => {
                   {sharing ? (
                     <>
                       <Loader className="w-5 h-5 animate-spin" />
-                      <span>Sharing...</span>
+                      <span>{t.sharing}</span>
                     </>
                   ) : (
                     <>
                       <Share2 className="w-5 h-5" />
-                      <span>Share to Forum</span>
+                      <span>{t.shareToForum}</span>
                     </>
                   )}
                 </button>

@@ -1,10 +1,152 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Video, VideoOff, Mic, MicOff, Phone, MessageCircle, Send, User, Clock, Star, X, PhoneCall, AlertCircle, RefreshCw, CheckCircle, Bell } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, Phone, MessageCircle, Send, User, Clock, Star, X, PhoneCall, AlertCircle, RefreshCw, CheckCircle, Bell, Globe } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000';
 const WS_BASE = 'ws://localhost:8000';
 
+const translations = {
+  en: {
+    expertConsultation: 'Expert Consultation',
+    connectWithSpecialists: 'Connect with specialists',
+    manageRequests: 'Manage consultation requests',
+    findSpecialists: 'Find Specialists',
+    videoRequests: 'Video Requests',
+    myChats: 'My Chats',
+    myVideoRequests: 'My Video Requests',
+    noSpecialists: 'No specialists available',
+    yearsExperience: 'years experience',
+    chat: 'Chat',
+    video: 'Video',
+    pendingVideoRequests: 'Pending Video Call Requests',
+    refresh: 'Refresh',
+    activeCallsWaiting: 'Active Video Calls Waiting',
+    joinNow: 'Join Now',
+    started: 'Started',
+    noPendingRequests: 'No pending video requests',
+    requestsAppearHere: 'Farmer requests will appear here',
+    topic: 'Topic',
+    details: 'Details',
+    requested: 'Requested',
+    acceptRequest: 'Accept Request',
+    accepting: 'Accepting...',
+    noActiveChats: 'No active chats',
+    noVideoRequests: 'No video requests yet',
+    requestFromTab: 'Request a video call from Find Specialists tab',
+    status: 'Status',
+    pending: 'Pending',
+    accepted: 'Accepted',
+    waitingForSpecialist: 'Waiting for specialist',
+    startVideoCall: 'Start Video Call',
+    starting: 'Starting...',
+    requestVideoCall: 'Request Video Call',
+    specialist: 'Specialist',
+    topicRequired: 'Topic',
+    description: 'Description',
+    urgency: 'Urgency',
+    low: 'Low',
+    normal: 'Normal',
+    high: 'High',
+    urgent: 'Urgent',
+    videoCallInfo: 'Video calls require specialist acceptance. You\'ll be notified when accepted.',
+    cancel: 'Cancel',
+    sendRequest: 'Send Request',
+    sending: 'Sending...',
+    endChat: 'End Chat',
+    chatConsultation: 'Chat consultation',
+    startConversation: 'Start the conversation',
+    typeMessage: 'Type message...',
+    endCall: 'End Call',
+    connected: 'Connected',
+    connecting: 'Connecting...',
+    sessionEnded: 'Session ended',
+    chatStarted: 'Chat started!',
+    requestSent: 'Video call request sent!',
+    requestAccepted: 'Request accepted! Farmer can now start the call.',
+    connectionFailed: 'Connection failed',
+    cameraError: 'Failed to access camera/microphone',
+    userJoined: 'joined',
+    provideDetails: 'Provide details...',
+    egTopic: 'e.g., Cotton pest problem',
+    onlyForFarmersSpecialists: 'Consultation feature is only available for farmers and specialists',
+    callAccepted: 'Video call request accepted! You can now start the call.',
+    farmerWaiting: 'is waiting in video call!',
+    join: 'Join',
+    activeCalls: 'Active Call(s)',
+    enterTopic: 'Please enter a topic'
+  },
+  te: {
+    expertConsultation: 'నిపుణుల సంప్రదింపు',
+    connectWithSpecialists: 'నిపుణులతో కనెక్ట్ అవ్వండి',
+    manageRequests: 'సంప్రదింపు అభ్యర్థనలను నిర్వహించండి',
+    findSpecialists: 'నిపుణులను కనుగొనండి',
+    videoRequests: 'వీడియో అభ్యర్థనలు',
+    myChats: 'నా చాట్‌లు',
+    myVideoRequests: 'నా వీడియో అభ్యర్థనలు',
+    noSpecialists: 'నిపుణులు అందుబాటులో లేరు',
+    yearsExperience: 'సంవత్సరాల అనుభవం',
+    chat: 'చాట్',
+    video: 'వీడియో',
+    pendingVideoRequests: 'పెండింగ్‌లో ఉన్న వీడియో కాల్ అభ్యర్థనలు',
+    refresh: 'రిఫ్రెష్',
+    activeCallsWaiting: 'యాక్టివ్ వీడియో కాల్‌లు వేచి ఉన్నాయి',
+    joinNow: 'ఇప్పుడే జాయిన్ అవ్వండి',
+    started: 'ప్రారంభించబడింది',
+    noPendingRequests: 'పెండింగ్ వీడియో అభ్యర్థనలు లేవు',
+    requestsAppearHere: 'రైతు అభ్యర్థనలు ఇక్కడ కనిపిస్తాయి',
+    topic: 'విషయం',
+    details: 'వివరాలు',
+    requested: 'అభ్యర్థించబడింది',
+    acceptRequest: 'అభ్యర్థనను అంగీకరించండి',
+    accepting: 'అంగీకరిస్తోంది...',
+    noActiveChats: 'యాక్టివ్ చాట్‌లు లేవు',
+    noVideoRequests: 'వీడియో అభ్యర్థనలు ఇంకా లేవు',
+    requestFromTab: 'నిపుణులను కనుగొనండి ట్యాబ్ నుండి వీడియో కాల్ అభ్యర్థించండి',
+    status: 'స్థితి',
+    pending: 'పెండింగ్',
+    accepted: 'అంగీకరించబడింది',
+    waitingForSpecialist: 'నిపుణుల కోసం వేచి ఉంది',
+    startVideoCall: 'వీడియో కాల్ ప్రారంభించండి',
+    starting: 'ప్రారంభిస్తోంది...',
+    requestVideoCall: 'వీడియో కాల్ అభ్యర్థించండి',
+    specialist: 'నిపుణుడు',
+    topicRequired: 'విషయం',
+    description: 'వివరణ',
+    urgency: 'అత్యవసరత',
+    low: 'తక్కువ',
+    normal: 'సాధారణ',
+    high: 'అధిక',
+    urgent: 'తక్షణ',
+    videoCallInfo: 'వీడియో కాల్‌లకు నిపుణుల అంగీకారం అవసరం. అంగీకరించినప్పుడు మీకు తెలియజేయబడుతుంది.',
+    cancel: 'రద్దు చేయి',
+    sendRequest: 'అభ్యర్థన పంపండి',
+    sending: 'పంపుతోంది...',
+    endChat: 'చాట్ ముగించు',
+    chatConsultation: 'చాట్ సంప్రదింపు',
+    startConversation: 'సంభాషణ ప్రారంభించండి',
+    typeMessage: 'సందేశం టైప్ చేయండి...',
+    endCall: 'కాల్ ముగించు',
+    connected: 'కనెక్ట్ అయింది',
+    connecting: 'కనెక్ట్ అవుతోంది...',
+    sessionEnded: 'సెషన్ ముగిసింది',
+    chatStarted: 'చాట్ ప్రారంభమైంది!',
+    requestSent: 'వీడియో కాల్ అభ్యర్థన పంపబడింది!',
+    requestAccepted: 'అభ్యర్థన అంగీకరించబడింది! రైతు ఇప్పుడు కాల్ ప్రారంభించవచ్చు.',
+    connectionFailed: 'కనెక్షన్ విఫలమైంది',
+    cameraError: 'కెమెరా/మైక్రోఫోన్ యాక్సెస్ చేయడంలో విఫలమైంది',
+    userJoined: 'చేరారు',
+    provideDetails: 'వివరాలు అందించండి...',
+    egTopic: 'ఉదా., పత్తి పురుగుల సమస్య',
+    onlyForFarmersSpecialists: 'సంప్రదింపు ఫీచర్ రైతులు మరియు నిపుణులకు మాత్రమే అందుబాటులో ఉంది',
+    callAccepted: 'వీడియో కాల్ అభ్యర్థన అంగీకరించబడింది! మీరు ఇప్పుడు కాల్ ప్రారంభించవచ్చు.',
+    farmerWaiting: 'వీడియో కాల్‌లో వేచి ఉన్నారు!',
+    join: 'చేరండి',
+    activeCalls: 'యాక్టివ్ కాల్(లు)',
+    enterTopic: 'దయచేసి విషయం నమోదు చేయండి'
+  }
+};
+
 export default function ConsultationPage() {
+  const [language, setLanguage] = useState('en');
   const [view, setView] = useState('main');
   const [specialists, setSpecialists] = useState([]);
   const [activeChats, setActiveChats] = useState([]);
@@ -39,8 +181,10 @@ export default function ConsultationPage() {
   const messagesEndRef = useRef(null);
   const callTimerRef = useRef(null);
   
-  const token = localStorage.getItem('access_token');
-  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const t = translations[language];
+  
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const currentUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
   const isFarmer = currentUser.role === 'farmer';
   const isSpecialist = currentUser.role === 'specialist';
 
@@ -109,6 +253,10 @@ export default function ConsultationPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'te' : 'en');
+  };
+
   const fetchSpecialists = async () => {
     setLoading(true);
     setError(null);
@@ -150,7 +298,7 @@ export default function ConsultationPage() {
       if (justAccepted) {
         setNotification({
           type: 'success',
-          message: `Video call request accepted! You can now start the call.`
+          message: t.callAccepted
         });
       }
     } catch (err) {
@@ -182,7 +330,7 @@ export default function ConsultationPage() {
       if (calls.length > 0 && !activeSession) {
         setNotification({
           type: 'info',
-          message: `${calls[0].farmer_name} is waiting in video call!`,
+          message: `${calls[0].farmer_name} ${t.farmerWaiting}`,
           action: () => joinActiveCall(calls[0])
         });
       }
@@ -242,7 +390,7 @@ export default function ConsultationPage() {
       setView('chatSession');
       await fetchMessages(data.session_id);
       connectWebSocket(data.session_id);
-      setNotification({ type: 'success', message: 'Chat started!' });
+      setNotification({ type: 'success', message: t.chatStarted });
     } catch (err) {
       setNotification({ type: 'error', message: err.message });
     } finally {
@@ -264,13 +412,26 @@ export default function ConsultationPage() {
 
   const sendMessage = async () => {
     if (!messageText.trim() || !activeSession) return;
+
+    const newMsg = {
+      sender_role: currentUser.role,
+      sender_name: currentUser.name || currentUser.full_name || 'You',
+      message_text: messageText,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages(prev => [...prev, newMsg]);
+    setMessageText('');
+
     try {
       await fetch(`${API_BASE}/api/consultations/${activeSession.id}/messages`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message_type: 'text', message_text: messageText })
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message_type: 'text', message_text: newMsg.message_text })
       });
-      setMessageText('');
     } catch (err) {
       console.error('Error:', err);
     }
@@ -278,7 +439,7 @@ export default function ConsultationPage() {
 
   const requestVideoCall = async () => {
     if (!videoRequestData.topic.trim()) {
-      setNotification({ type: 'error', message: 'Please enter a topic' });
+      setNotification({ type: 'error', message: t.enterTopic });
       return;
     }
 
@@ -297,7 +458,7 @@ export default function ConsultationPage() {
 
       setVideoRequestModal(false);
       setVideoRequestData({ topic: '', description: '', urgency: 'normal' });
-      setNotification({ type: 'success', message: 'Video call request sent!' });
+      setNotification({ type: 'success', message: t.requestSent });
       setView('my-requests');
       fetchMyVideoRequests();
     } catch (err) {
@@ -317,7 +478,7 @@ export default function ConsultationPage() {
 
       if (!response.ok) throw new Error('Failed to accept request');
 
-      setNotification({ type: 'success', message: 'Request accepted! Farmer can now start the call.' });
+      setNotification({ type: 'success', message: t.requestAccepted });
       fetchPendingVideoRequests();
     } catch (err) {
       setNotification({ type: 'error', message: err.message });
@@ -379,7 +540,7 @@ export default function ConsultationPage() {
         if (remoteVideoRef.current && event.streams[0]) {
           remoteVideoRef.current.srcObject = event.streams[0];
           setCallStatus('connected');
-          setNotification({ type: 'success', message: 'Connected!' });
+          setNotification({ type: 'success', message: t.connected });
         }
       };
 
@@ -395,7 +556,7 @@ export default function ConsultationPage() {
           setCallStatus('connected');
         } else if (peerConnection.connectionState === 'failed') {
           setCallStatus('failed');
-          setNotification({ type: 'error', message: 'Connection failed' });
+          setNotification({ type: 'error', message: t.connectionFailed });
         }
       };
 
@@ -413,7 +574,7 @@ export default function ConsultationPage() {
       setCallStatus('connecting');
     } catch (err) {
       console.error('WebRTC init error:', err);
-      setNotification({ type: 'error', message: 'Failed to access camera/microphone' });
+      setNotification({ type: 'error', message: t.cameraError });
       endSession();
     }
   };
@@ -501,7 +662,7 @@ export default function ConsultationPage() {
         setMessages(prev => [...prev, data.message]);
       } else if (data.type === 'user_joined') {
         console.log('User joined:', data.user_role);
-        setNotification({ type: 'info', message: `${data.user_role} joined` });
+        setNotification({ type: 'info', message: `${data.user_role} ${t.userJoined}` });
       }
     };
 
@@ -533,7 +694,7 @@ export default function ConsultationPage() {
       setMessages([]);
       setCallStatus('idle');
       setView('main');
-      setNotification({ type: 'success', message: 'Session ended' });
+      setNotification({ type: 'success', message: t.sessionEnded });
     } catch (err) {
       console.error('Error:', err);
     }
@@ -544,7 +705,7 @@ export default function ConsultationPage() {
       <div className="max-w-7xl mx-auto p-6">
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
           <AlertCircle className="mx-auto mb-4 text-yellow-600" size={48} />
-          <p className="text-yellow-800 text-lg">Consultation feature is only available for farmers and specialists</p>
+          <p className="text-yellow-800 text-lg">{t.onlyForFarmersSpecialists}</p>
         </div>
       </div>
     );
@@ -563,20 +724,25 @@ export default function ConsultationPage() {
                 {isFarmer ? activeSession?.specialist_name : activeSession?.farmer_name}
               </h2>
               <p className="text-green-100 text-sm flex items-center gap-2">
-                <MessageCircle size={14} /> Chat consultation
+                <MessageCircle size={14} /> {t.chatConsultation}
               </p>
             </div>
           </div>
-          <button onClick={endSession} className="px-6 py-2 bg-white text-green-600 rounded-lg font-semibold hover:bg-green-50">
-            End Chat
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={toggleLanguage} className="p-2 bg-white bg-opacity-20 rounded-lg hover:bg-opacity-30">
+              <Globe size={20} className="text-white" />
+            </button>
+            <button onClick={endSession} className="px-6 py-2 bg-white text-green-600 rounded-lg font-semibold hover:bg-green-50">
+              {t.endChat}
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <MessageCircle className="mx-auto mb-4 text-gray-300" size={64} />
-              <p className="text-gray-500">Start the conversation</p>
+              <p className="text-gray-500">{t.startConversation}</p>
             </div>
           ) : (
             messages.map((msg, idx) => (
@@ -599,7 +765,7 @@ export default function ConsultationPage() {
               value={messageText} 
               onChange={(e) => setMessageText(e.target.value)} 
               onKeyPress={(e) => e.key === 'Enter' && sendMessage()} 
-              placeholder="Type message..." 
+              placeholder={t.typeMessage}
               className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" 
             />
             <button 
@@ -628,13 +794,18 @@ export default function ConsultationPage() {
                 {isFarmer ? activeSession?.specialist_name : activeSession?.farmer_name}
               </h2>
               <p className="text-gray-300 text-sm">
-                {callStatus === 'connected' ? `Connected - ${formatCallTime(callTimer)}` : 'Connecting...'}
+                {callStatus === 'connected' ? `${t.connected} - ${formatCallTime(callTimer)}` : t.connecting}
               </p>
             </div>
           </div>
-          <button onClick={endSession} className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700">
-            End Call
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={toggleLanguage} className="p-2 bg-gray-700 rounded-lg hover:bg-gray-600">
+              <Globe size={20} className="text-white" />
+            </button>
+            <button onClick={endSession} className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700">
+              {t.endCall}
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 relative bg-black">
@@ -644,7 +815,7 @@ export default function ConsultationPage() {
             <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
               <div className="text-center">
                 <div className="w-24 h-24 border-4 border-gray-600 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-400 text-lg">Connecting...</p>
+                <p className="text-gray-400 text-lg">{t.connecting}</p>
               </div>
             </div>
           )}
@@ -691,16 +862,25 @@ export default function ConsultationPage() {
                 onClick={notification.action}
                 className="ml-4 px-4 py-2 bg-white bg-opacity-20 rounded hover:bg-opacity-30 font-semibold"
               >
-                Join
+                {t.join}
               </button>
             )}
           </div>
         </div>
       )}
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Expert Consultation</h1>
-        <p className="text-gray-600">{isFarmer ? 'Connect with specialists' : 'Manage consultation requests'}</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.expertConsultation}</h1>
+          <p className="text-gray-600">{isFarmer ? t.connectWithSpecialists : t.manageRequests}</p>
+        </div>
+        <button 
+          onClick={toggleLanguage}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+        >
+          <Globe size={20} />
+          {language === 'en' ? 'తెలుగు' : 'English'}
+        </button>
       </div>
 
       <div className="flex gap-4 mb-6 flex-wrap">
@@ -709,7 +889,7 @@ export default function ConsultationPage() {
             onClick={() => setView('main')} 
             className={`px-6 py-3 rounded-lg font-semibold ${view === 'main' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
           >
-            Find Specialists
+            {t.findSpecialists}
           </button>
         )}
         
@@ -719,7 +899,7 @@ export default function ConsultationPage() {
               onClick={() => setView('main')} 
               className={`px-6 py-3 rounded-lg font-semibold relative ${view === 'main' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
             >
-              Video Requests
+              {t.videoRequests}
               {pendingRequestsCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                   {pendingRequestsCount}
@@ -728,7 +908,7 @@ export default function ConsultationPage() {
             </button>
             {activeCalls.length > 0 && (
               <span className="px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-bold animate-pulse">
-                {activeCalls.length} Active Call(s)
+                {activeCalls.length} {t.activeCalls}
               </span>
             )}
           </>
@@ -738,7 +918,7 @@ export default function ConsultationPage() {
           onClick={() => setView('chats')} 
           className={`px-6 py-3 rounded-lg font-semibold ${view === 'chats' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
         >
-          My Chats
+          {t.myChats}
         </button>
         
         {isFarmer && (
@@ -746,7 +926,7 @@ export default function ConsultationPage() {
             onClick={() => setView('my-requests')} 
             className={`px-6 py-3 rounded-lg font-semibold ${view === 'my-requests' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
           >
-            My Video Requests
+            {t.myVideoRequests}
           </button>
         )}
       </div>
@@ -754,7 +934,7 @@ export default function ConsultationPage() {
       {view === 'main' && isFarmer && (
         <div>
           {loading && <div className="text-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent mx-auto"></div></div>}
-          {!loading && specialists.length === 0 && <div className="bg-gray-50 p-12 rounded-xl text-center"><p className="text-gray-600">No specialists available</p></div>}
+          {!loading && specialists.length === 0 && <div className="bg-gray-50 p-12 rounded-xl text-center"><p className="text-gray-600">{t.noSpecialists}</p></div>}
           {!loading && specialists.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {specialists.map((specialist) => (
@@ -772,13 +952,13 @@ export default function ConsultationPage() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4">{specialist.experience_years} years experience</p>
+                  <p className="text-sm text-gray-600 mb-4">{specialist.experience_years} {t.yearsExperience}</p>
                   <div className="flex gap-2">
                     <button onClick={() => startDirectChat(specialist)} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2">
-                      <MessageCircle size={18} /> Chat
+                      <MessageCircle size={18} /> {t.chat}
                     </button>
                     <button onClick={() => { setSelectedSpecialist(specialist); setVideoRequestModal(true); }} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-                      <PhoneCall size={18} /> Video
+                      <PhoneCall size={18} /> {t.video}
                     </button>
                   </div>
                 </div>
@@ -791,16 +971,16 @@ export default function ConsultationPage() {
       {view === 'main' && isSpecialist && (
         <div>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Pending Video Call Requests</h2>
+            <h2 className="text-2xl font-bold">{t.pendingVideoRequests}</h2>
             <button onClick={fetchPendingVideoRequests} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-2">
-              <RefreshCw size={18} /> Refresh
+              <RefreshCw size={18} /> {t.refresh}
             </button>
           </div>
 
           {activeCalls.length > 0 && (
             <div className="mb-6 bg-blue-50 border-2 border-blue-300 rounded-xl p-6">
               <h3 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
-                <Bell className="animate-pulse" /> Active Video Calls Waiting
+                <Bell className="animate-pulse" /> {t.activeCallsWaiting}
               </h3>
               <div className="space-y-3">
                 {activeCalls.map((call) => (
@@ -808,13 +988,13 @@ export default function ConsultationPage() {
                     <div>
                       <p className="font-bold text-lg">{call.farmer_name}</p>
                       <p className="text-sm text-gray-600">{call.topic}</p>
-                      <p className="text-xs text-gray-500">Started: {new Date(call.started_at).toLocaleTimeString()}</p>
+                      <p className="text-xs text-gray-500">{t.started}: {new Date(call.started_at).toLocaleTimeString()}</p>
                     </div>
                     <button 
                       onClick={() => joinActiveCall(call)}
                       className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 flex items-center gap-2 animate-pulse"
                     >
-                      <Video size={20} /> Join Now
+                      <Video size={20} /> {t.joinNow}
                     </button>
                   </div>
                 ))}
@@ -827,8 +1007,8 @@ export default function ConsultationPage() {
           {!loading && videoRequests.length === 0 && (
             <div className="bg-gray-50 p-12 rounded-xl text-center">
               <PhoneCall className="mx-auto mb-4 text-gray-400" size={64} />
-              <p className="text-gray-600 text-lg">No pending video requests</p>
-              <p className="text-sm text-gray-500 mt-2">Farmer requests will appear here</p>
+              <p className="text-gray-600 text-lg">{t.noPendingRequests}</p>
+              <p className="text-sm text-gray-500 mt-2">{t.requestsAppearHere}</p>
             </div>
           )}
           
@@ -849,20 +1029,20 @@ export default function ConsultationPage() {
                       </div>
                       
                       <div className="bg-blue-50 rounded-lg p-4 mb-3">
-                        <p className="text-sm font-semibold text-gray-700 mb-1">Topic:</p>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">{t.topic}:</p>
                         <p className="text-base text-gray-900">{request.topic}</p>
                       </div>
                       
                       {request.description && (
                         <div className="bg-gray-50 rounded-lg p-4 mb-3">
-                          <p className="text-sm font-semibold text-gray-700 mb-1">Details:</p>
+                          <p className="text-sm font-semibold text-gray-700 mb-1">{t.details}:</p>
                           <p className="text-sm text-gray-800">{request.description}</p>
                         </div>
                       )}
                       
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <Clock size={14} />
-                        <span>Requested: {new Date(request.created_at).toLocaleString()}</span>
+                        <span>{t.requested}: {new Date(request.created_at).toLocaleString()}</span>
                       </div>
                     </div>
                     
@@ -872,7 +1052,7 @@ export default function ConsultationPage() {
                       disabled={loading}
                     >
                       <CheckCircle size={22} />
-                      {loading ? 'Accepting...' : 'Accept Request'}
+                      {loading ? t.accepting : t.acceptRequest}
                     </button>
                   </div>
                 </div>
@@ -887,7 +1067,7 @@ export default function ConsultationPage() {
           {activeChats.length === 0 ? (
             <div className="bg-gray-50 p-12 rounded-xl text-center">
               <MessageCircle className="mx-auto mb-4 text-gray-400" size={64} />
-              <p className="text-gray-600 text-lg">No active chats</p>
+              <p className="text-gray-600 text-lg">{t.noActiveChats}</p>
             </div>
           ) : (
             activeChats.map((chat) => (
@@ -916,17 +1096,17 @@ export default function ConsultationPage() {
       {view === 'my-requests' && isFarmer && (
         <div>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">My Video Call Requests</h2>
+            <h2 className="text-2xl font-bold">{t.myVideoRequests}</h2>
             <button onClick={fetchMyVideoRequests} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center gap-2">
-              <RefreshCw size={18} /> Refresh
+              <RefreshCw size={18} /> {t.refresh}
             </button>
           </div>
           
           {videoRequests.length === 0 ? (
             <div className="bg-gray-50 p-12 rounded-xl text-center">
               <PhoneCall className="mx-auto mb-4 text-gray-400" size={64} />
-              <p className="text-gray-600 text-lg">No video requests yet</p>
-              <p className="text-sm text-gray-500 mt-2">Request a video call from Find Specialists tab</p>
+              <p className="text-gray-600 text-lg">{t.noVideoRequests}</p>
+              <p className="text-sm text-gray-500 mt-2">{t.requestFromTab}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -943,13 +1123,13 @@ export default function ConsultationPage() {
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-1 ${
                             request.status === 'accepted' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {request.status.toUpperCase()}
+                            {request.status === 'accepted' ? t.accepted.toUpperCase() : t.pending.toUpperCase()}
                           </span>
                         </div>
                       </div>
                       
                       <div className="bg-blue-50 rounded-lg p-4 mb-3">
-                        <p className="text-sm font-semibold text-gray-700 mb-1">Topic:</p>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">{t.topic}:</p>
                         <p className="text-base text-gray-900">{request.topic}</p>
                       </div>
                       
@@ -961,7 +1141,7 @@ export default function ConsultationPage() {
                       
                       <div className="text-xs text-gray-500">
                         <Clock size={14} className="inline mr-1" />
-                        Requested: {new Date(request.created_at).toLocaleString()}
+                        {t.requested}: {new Date(request.created_at).toLocaleString()}
                       </div>
                     </div>
                     
@@ -973,13 +1153,13 @@ export default function ConsultationPage() {
                           disabled={loading}
                         >
                           <Video size={22} />
-                          {loading ? 'Starting...' : 'Start Video Call'}
+                          {loading ? t.starting : t.startVideoCall}
                         </button>
                       ) : (
                         <div className="px-6 py-4 bg-yellow-100 border-2 border-yellow-500 text-yellow-800 rounded-xl font-bold text-center">
                           <Clock size={24} className="mx-auto mb-2" />
-                          <p className="text-sm">Pending</p>
-                          <p className="text-xs mt-1 font-normal">Waiting for specialist</p>
+                          <p className="text-sm">{t.pending}</p>
+                          <p className="text-xs mt-1 font-normal">{t.waitingForSpecialist}</p>
                         </div>
                       )}
                     </div>
@@ -995,7 +1175,7 @@ export default function ConsultationPage() {
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Request Video Call</h2>
+              <h2 className="text-2xl font-bold">{t.requestVideoCall}</h2>
               <button onClick={() => setVideoRequestModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </button>
@@ -1003,7 +1183,7 @@ export default function ConsultationPage() {
 
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Specialist</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{t.specialist}</label>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <User size={24} className="text-gray-600" />
                   <span className="font-medium">{selectedSpecialist?.name}</span>
@@ -1012,45 +1192,45 @@ export default function ConsultationPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Topic <span className="text-red-500">*</span>
+                  {t.topicRequired} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={videoRequestData.topic}
                   onChange={(e) => setVideoRequestData(prev => ({ ...prev, topic: e.target.value }))}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  placeholder="e.g., Cotton pest problem"
+                  placeholder={t.egTopic}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{t.description}</label>
                 <textarea 
                   value={videoRequestData.description} 
                   onChange={(e) => setVideoRequestData(prev => ({ ...prev, description: e.target.value }))} 
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" 
                   rows="4" 
-                  placeholder="Provide details..." 
+                  placeholder={t.provideDetails}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Urgency</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{t.urgency}</label>
                 <select 
                   value={videoRequestData.urgency} 
                   onChange={(e) => setVideoRequestData(prev => ({ ...prev, urgency: e.target.value }))} 
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
+                  <option value="low">{t.low}</option>
+                  <option value="normal">{t.normal}</option>
+                  <option value="high">{t.high}</option>
+                  <option value="urgent">{t.urgent}</option>
                 </select>
               </div>
 
               <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  Video calls require specialist acceptance. You'll be notified when accepted.
+                  {t.videoCallInfo}
                 </p>
               </div>
 
@@ -1060,14 +1240,14 @@ export default function ConsultationPage() {
                   className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50" 
                   disabled={loading}
                 >
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button 
                   onClick={requestVideoCall} 
                   className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400" 
                   disabled={loading || !videoRequestData.topic.trim()}
                 >
-                  {loading ? 'Sending...' : 'Send Request'}
+                  {loading ? t.sending : t.sendRequest}
                 </button>
               </div>
             </div>

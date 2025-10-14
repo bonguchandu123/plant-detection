@@ -1,10 +1,113 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle, ThumbsUp, Clock, User, Plus, X, Share2, CheckCircle, TrendingUp, MapPin, Image as ImageIcon, AlertCircle, Upload, Loader } from 'lucide-react';
+import { Send, MessageCircle, ThumbsUp, Clock, User, Plus, X, Share2, CheckCircle, TrendingUp, MapPin, Image as ImageIcon, AlertCircle, Upload, Loader, Globe } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000';
 const WS_BASE = 'ws://localhost:8000';
 
+// Translation object
+const translations = {
+  en: {
+    title: "Community Forum",
+    subtitle: "Connect, share, and learn from fellow farmers",
+    newPost: "New Post",
+    allPosts: "All Posts",
+    questionsOnly: "Questions Only",
+    withAnalysis: "With Analysis",
+    noPosts: "No posts yet",
+    beFirst: "Be the first to share your experience!",
+    createFirstPost: "Create First Post",
+    solved: "Solved",
+    aiAnalysis: "AI Analysis",
+    trendingTopics: "Trending Topics",
+    noTrending: "No trending topics yet",
+    shareAnalysis: "Share Your Analysis",
+    shareAnalysisDesc: "Got a crop analysis? Share it with the community to get expert advice!",
+    createPost: "Create Post",
+    createNewPost: "Create New Post",
+    addPhotos: "Add Photos (Optional)",
+    uploading: "Uploading...",
+    clickUpload: "Click to upload images",
+    maxSize: "JPG, PNG (max 10MB)",
+    markQuestion: "Mark as Question",
+    titleLabel: "Title",
+    titlePlaceholder: "What's your question or topic?",
+    description: "Description",
+    descriptionPlaceholder: "Describe your question or share your experience...",
+    tags: "Tags",
+    tagsPlaceholder: "Add tags (press Enter)",
+    cancel: "Cancel",
+    publishPost: "Publish Post",
+    aiCropAnalysis: "AI Crop Analysis",
+    diseaseDetected: "Disease Detected",
+    aiConfidence: "AI Confidence",
+    status: "Status",
+    aiAnalyzed: "AI Analyzed",
+    suggestedTreatment: "Suggested Treatment:",
+    likes: "Likes",
+    helpful: "Helpful",
+    markSolved: "Mark as Solved",
+    comments: "Comments",
+    noComments: "No comments yet",
+    beFirstComment: "Be the first to share your thoughts!",
+    commentPlaceholder: "Share your thoughts or advice...",
+    send: "Send",
+    loading: "Loading community posts...",
+    imageNotAvailable: "Image Not Available",
+    more: "more"
+  },
+  te: {
+    title: "కమ్యూనిటీ ఫోరమ్",
+    subtitle: "తోటి రైతులతో కనెక్ట్ అవ్వండి, పంచుకోండి మరియు నేర్చుకోండి",
+    newPost: "కొత్త పోస్ట్",
+    allPosts: "అన్ని పోస్ట్‌లు",
+    questionsOnly: "ప్రశ్నలు మాత్రమే",
+    withAnalysis: "విశ్లేషణతో",
+    noPosts: "ఇంకా పోస్ట్‌లు లేవు",
+    beFirst: "మీ అనుభవాన్ని పంచుకునే మొదటి వ్యక్తి అవ్వండి!",
+    createFirstPost: "మొదటి పోస్ట్ సృష్టించండి",
+    solved: "పరిష్కరించబడింది",
+    aiAnalysis: "AI విశ్లేషణ",
+    trendingTopics: "ట్రెండింగ్ అంశాలు",
+    noTrending: "ఇంకా ట్రెండింగ్ అంశాలు లేవు",
+    shareAnalysis: "మీ విశ్లేషణను పంచుకోండి",
+    shareAnalysisDesc: "పంట విశ్లేషణ ఉందా? నిపుణుల సలహా కోసం కమ్యూనిటీతో పంచుకోండి!",
+    createPost: "పోస్ట్ సృష్టించండి",
+    createNewPost: "కొత్త పోస్ట్ సృష్టించండి",
+    addPhotos: "ఫోటోలు జోడించండి (ఐచ్ఛికం)",
+    uploading: "అప్‌లోడ్ చేస్తోంది...",
+    clickUpload: "చిత్రాలను అప్‌లోడ్ చేయడానికి క్లిక్ చేయండి",
+    maxSize: "JPG, PNG (గరిష్టం 10MB)",
+    markQuestion: "ప్రశ్నగా గుర్తించండి",
+    titleLabel: "శీర్షిక",
+    titlePlaceholder: "మీ ప్రశ్న లేదా అంశం ఏమిటి?",
+    description: "వివరణ",
+    descriptionPlaceholder: "మీ ప్రశ్నను వివరించండి లేదా మీ అనుభవాన్ని పంచుకోండి...",
+    tags: "ట్యాగ్‌లు",
+    tagsPlaceholder: "ట్యాగ్‌లు జోడించండి (ఎంటర్ నొక్కండి)",
+    cancel: "రద్దు చేయండి",
+    publishPost: "పోస్ట్ ప్రచురించండి",
+    aiCropAnalysis: "AI పంట విశ్లేషణ",
+    diseaseDetected: "గుర్తించబడిన వ్యాధి",
+    aiConfidence: "AI విశ్వాసం",
+    status: "స్థితి",
+    aiAnalyzed: "AI విశ్లేషించబడింది",
+    suggestedTreatment: "సూచించిన చికిత్స:",
+    likes: "లైక్‌లు",
+    helpful: "సహాయకరమైనది",
+    markSolved: "పరిష్కరించబడినట్లు గుర్తించండి",
+    comments: "వ్యాఖ్యలు",
+    noComments: "ఇంకా వ్యాఖ్యలు లేవు",
+    beFirstComment: "మీ ఆలోచనలను పంచుకునే మొదటి వ్యక్తి అవ్వండి!",
+    commentPlaceholder: "మీ ఆలోచనలు లేదా సలహాలను పంచుకోండి...",
+    send: "పంపండి",
+    loading: "కమ్యూనిటీ పోస్ట్‌లు లోడ్ అవుతున్నాయి...",
+    imageNotAvailable: "చిత్రం అందుబాటులో లేదు",
+    more: "ఇంకా"
+  }
+};
+
 export default function CommunityPage() {
+  const [language, setLanguage] = useState('en');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -17,7 +120,9 @@ export default function CommunityPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
   const ws = useRef(null);
-  const token = localStorage.getItem('access_token');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+
+  const t = translations[language];
 
   useEffect(() => {
     if (!token) return;
@@ -236,10 +341,10 @@ export default function CommunityPage() {
 
   const formatTimeAgo = (dateString) => {
     const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return `${Math.floor(seconds / 86400)}d ago`;
+    if (seconds < 60) return language === 'en' ? 'just now' : 'ఇప్పుడే';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}${language === 'en' ? 'm ago' : 'నిమి క్రితం'}`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}${language === 'en' ? 'h ago' : 'గం క్రితం'}`;
+    return `${Math.floor(seconds / 86400)}${language === 'en' ? 'd ago' : 'రో క్రితం'}`;
   };
 
   const getPostImage = (post) => {
@@ -257,7 +362,7 @@ export default function CommunityPage() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading community posts...</p>
+          <p className="text-gray-600 font-medium">{t.loading}</p>
         </div>
       </div>
     );
@@ -266,19 +371,29 @@ export default function CommunityPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header with Language Toggle */}
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Community Forum</h1>
-            <p className="text-gray-600">Connect, share, and learn from fellow farmers</p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">{t.title}</h1>
+            <p className="text-gray-600">{t.subtitle}</p>
           </div>
-          <button
-            onClick={() => setNewPostModal(true)}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
-          >
-            <Plus size={20} />
-            New Post
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Language Toggle */}
+            <button
+              onClick={() => setLanguage(language === 'en' ? 'te' : 'en')}
+              className="bg-white text-gray-700 px-4 py-3 rounded-xl font-semibold hover:bg-gray-100 flex items-center gap-2 shadow-md border border-gray-200 transition-all"
+            >
+              <Globe size={20} />
+              {language === 'en' ? 'తెలుగు' : 'English'}
+            </button>
+            <button
+              onClick={() => setNewPostModal(true)}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 flex items-center gap-2 shadow-lg hover:shadow-xl transition-all"
+            >
+              <Plus size={20} />
+              {t.newPost}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -296,7 +411,7 @@ export default function CommunityPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {f === 'all' ? 'All Posts' : f === 'questions' ? 'Questions Only' : 'With Analysis'}
+                  {f === 'all' ? t.allPosts : f === 'questions' ? t.questionsOnly : t.withAnalysis}
                 </button>
               ))}
             </div>
@@ -307,14 +422,14 @@ export default function CommunityPage() {
                 <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageCircle className="w-10 h-10 text-gray-300" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No posts yet</h3>
-                <p className="text-gray-600 mb-6">Be the first to share your experience!</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{t.noPosts}</h3>
+                <p className="text-gray-600 mb-6">{t.beFirst}</p>
                 <button
                   onClick={() => setNewPostModal(true)}
                   className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 inline-flex items-center gap-2"
                 >
                   <Plus size={18} />
-                  Create First Post
+                  {t.createFirstPost}
                 </button>
               </div>
             ) : (
@@ -335,14 +450,14 @@ export default function CommunityPage() {
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="18" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3EImage Not Available%3C/text%3E%3C/svg%3E';
+                            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="18" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3E' + t.imageNotAvailable + '%3C/text%3E%3C/svg%3E';
                           }}
                         />
                         {post.analysis_reference && (
                           <div className="absolute top-3 left-3">
                             <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-lg">
                               <AlertCircle size={14} />
-                              AI Analysis
+                              {t.aiAnalysis}
                             </span>
                           </div>
                         )}
@@ -357,7 +472,7 @@ export default function CommunityPage() {
                         {post.is_solved && (
                           <span className="flex items-center gap-1 text-green-600 text-sm font-semibold bg-green-50 px-3 py-1 rounded-full ml-3 flex-shrink-0">
                             <CheckCircle size={16} />
-                            Solved
+                            {t.solved}
                           </span>
                         )}
                       </div>
@@ -373,7 +488,7 @@ export default function CommunityPage() {
                                 {post.analysis_reference.disease}
                               </p>
                               <p className="text-xs text-blue-700">
-                                AI Confidence: {(post.analysis_reference.confidence * 100).toFixed(1)}%
+                                {t.aiConfidence}: {(post.analysis_reference.confidence * 100).toFixed(1)}%
                               </p>
                             </div>
                           </div>
@@ -391,7 +506,7 @@ export default function CommunityPage() {
                           ))}
                           {post.tags.length > 3 && (
                             <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-semibold">
-                              +{post.tags.length - 3} more
+                              +{post.tags.length - 3} {t.more}
                             </span>
                           )}
                         </div>
@@ -443,11 +558,11 @@ export default function CommunityPage() {
             <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                 <TrendingUp size={20} className="text-green-600" />
-                Trending Topics
+                {t.trendingTopics}
               </h3>
               <div className="space-y-2">
                 {trendingTags.length === 0 ? (
-                  <p className="text-sm text-gray-500">No trending topics yet</p>
+                  <p className="text-sm text-gray-500">{t.noTrending}</p>
                 ) : (
                   trendingTags.map((item, idx) => (
                     <button
@@ -467,23 +582,23 @@ export default function CommunityPage() {
               <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-4">
                 <Share2 className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-bold text-lg mb-2 text-gray-900">Share Your Analysis</h3>
+              <h3 className="font-bold text-lg mb-2 text-gray-900">{t.shareAnalysis}</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Got a crop analysis? Share it with the community to get expert advice!
+                {t.shareAnalysisDesc}
               </p>
               <button
                 onClick={() => setNewPostModal(true)}
                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 flex items-center justify-center gap-2 font-semibold shadow-lg transition-all"
               >
                 <Plus size={18} />
-                Create Post
+                {t.createPost}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Create Post Modal with Image Upload */}
+      {/* Create Post Modal */}
       {newPostModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -493,7 +608,7 @@ export default function CommunityPage() {
                   <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                     <Plus className="w-6 h-6 text-white" />
                   </div>
-                  Create New Post
+                  {t.createNewPost}
                 </h2>
                 <button
                   onClick={() => {
@@ -513,7 +628,7 @@ export default function CommunityPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-gray-500" />
-                  Add Photos (Optional)
+                  {t.addPhotos}
                 </label>
                 
                 {/* Image Preview */}
@@ -554,15 +669,15 @@ export default function CommunityPage() {
                     {uploadingImage ? (
                       <div className="flex flex-col items-center">
                         <Loader className="w-10 h-10 text-green-600 animate-spin mb-2" />
-                        <p className="text-sm text-gray-600 font-medium">Uploading...</p>
+                        <p className="text-sm text-gray-600 font-medium">{t.uploading}</p>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center">
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-2">
                           <Upload className="w-6 h-6 text-green-600" />
                         </div>
-                        <p className="text-sm text-gray-700 font-semibold mb-1">Click to upload images</p>
-                        <p className="text-xs text-gray-500">JPG, PNG (max 10MB)</p>
+                        <p className="text-sm text-gray-700 font-semibold mb-1">{t.clickUpload}</p>
+                        <p className="text-xs text-gray-500">{t.maxSize}</p>
                       </div>
                     )}
                   </label>
@@ -578,37 +693,37 @@ export default function CommunityPage() {
                     onChange={(e) => setNewPost(prev => ({ ...prev, is_question: e.target.checked }))}
                     className="w-5 h-5 text-green-600 rounded"
                   />
-                  <span className="text-sm font-semibold text-gray-700">Mark as Question</span>
+                  <span className="text-sm font-semibold text-gray-700">{t.markQuestion}</span>
                 </label>
               </div>
 
               {/* Title */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">Title</label>
+                <label className="block text-sm font-bold text-gray-700 mb-3">{t.titleLabel}</label>
                 <input
                   type="text"
                   value={newPost.title}
                   onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
-                  placeholder="What's your question or topic?"
+                  placeholder={t.titlePlaceholder}
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">Description</label>
+                <label className="block text-sm font-bold text-gray-700 mb-3">{t.description}</label>
                 <textarea
                   value={newPost.content_text}
                   onChange={(e) => setNewPost(prev => ({ ...prev, content_text: e.target.value }))}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
                   rows="6"
-                  placeholder="Describe your question or share your experience..."
+                  placeholder={t.descriptionPlaceholder}
                 />
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">Tags</label>
+                <label className="block text-sm font-bold text-gray-700 mb-3">{t.tags}</label>
                 <div className="flex gap-2 mb-3">
                   <input
                     type="text"
@@ -624,7 +739,7 @@ export default function CommunityPage() {
                       }
                     }}
                     className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                    placeholder="Add tags (press Enter)"
+                    placeholder={t.tagsPlaceholder}
                   />
                 </div>
                 <div className="flex gap-2 flex-wrap">
@@ -652,14 +767,14 @@ export default function CommunityPage() {
                   }}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
                 >
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button
                   onClick={handleCreatePost}
                   disabled={!newPost.title || !newPost.content_text || uploadingImage}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg transition-all"
                 >
-                  Publish Post
+                  {t.publishPost}
                 </button>
               </div>
             </div>
@@ -667,7 +782,7 @@ export default function CommunityPage() {
         </div>
       )}
 
-      {/* Post Detail Modal - Keep your existing code */}
+      {/* Post Detail Modal */}
       {selectedPost && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
@@ -678,7 +793,7 @@ export default function CommunityPage() {
                   {selectedPost.is_solved && (
                     <span className="flex items-center gap-1 text-green-600 text-sm font-semibold bg-green-50 px-4 py-2 rounded-full border-2 border-green-200">
                       <CheckCircle size={16} />
-                      Solved
+                      {t.solved}
                     </span>
                   )}
                 </div>
@@ -716,7 +831,7 @@ export default function CommunityPage() {
                       className="w-full max-h-96 object-cover"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect fill="%23f3f4f6" width="800" height="400"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3EImage Not Available%3C/text%3E%3C/svg%3E';
+                        e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="400"%3E%3Crect fill="%23f3f4f6" width="800" height="400"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3E' + t.imageNotAvailable + '%3C/text%3E%3C/svg%3E';
                       }}
                     />
                   </div>
@@ -730,15 +845,15 @@ export default function CommunityPage() {
                     <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                       <AlertCircle className="w-5 h-5 text-white" />
                     </div>
-                    AI Crop Analysis
+                    {t.aiCropAnalysis}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white bg-opacity-70 rounded-xl p-4">
                     <div>
-                      <p className="text-xs text-gray-600 mb-1 font-medium">Disease Detected</p>
+                      <p className="text-xs text-gray-600 mb-1 font-medium">{t.diseaseDetected}</p>
                       <p className="font-bold text-gray-900">{selectedPost.analysis_reference.disease}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-600 mb-1 font-medium">AI Confidence</p>
+                      <p className="text-xs text-gray-600 mb-1 font-medium">{t.aiConfidence}</p>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div 
@@ -752,16 +867,16 @@ export default function CommunityPage() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-600 mb-1 font-medium">Status</p>
+                      <p className="text-xs text-gray-600 mb-1 font-medium">{t.status}</p>
                       <span className="inline-flex items-center gap-1 bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
                         <AlertCircle size={12} />
-                        AI Analyzed
+                        {t.aiAnalyzed}
                       </span>
                     </div>
                   </div>
                   {selectedPost.analysis_reference.suggested_treatment && (
                     <div className="mt-4 bg-white bg-opacity-70 rounded-xl p-4">
-                      <p className="text-xs text-gray-600 mb-2 font-bold">Suggested Treatment:</p>
+                      <p className="text-xs text-gray-600 mb-2 font-bold">{t.suggestedTreatment}</p>
                       <p className="text-sm text-gray-700 leading-relaxed line-clamp-3">
                         {selectedPost.analysis_reference.suggested_treatment}
                       </p>
@@ -793,14 +908,14 @@ export default function CommunityPage() {
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl hover:bg-gray-100 transition-all font-medium"
                 >
                   <ThumbsUp size={18} />
-                  <span>{selectedPost.likes} Likes</span>
+                  <span>{selectedPost.likes} {t.likes}</span>
                 </button>
                 <button
                   onClick={() => handleMarkHelpful(selectedPost.id)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl hover:bg-gray-100 transition-all font-medium"
                 >
                   <CheckCircle size={18} />
-                  <span>Helpful ({selectedPost.helpful_count})</span>
+                  <span>{t.helpful} ({selectedPost.helpful_count})</span>
                 </button>
                 {selectedPost.is_question && !selectedPost.is_solved && (
                   <button
@@ -808,7 +923,7 @@ export default function CommunityPage() {
                     className="flex items-center gap-2 px-5 py-2.5 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-all font-semibold border-2 border-green-200"
                   >
                     <CheckCircle size={18} />
-                    Mark as Solved
+                    {t.markSolved}
                   </button>
                 )}
               </div>
@@ -817,7 +932,7 @@ export default function CommunityPage() {
               <div>
                 <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
                   <MessageCircle className="w-6 h-6 text-gray-600" />
-                  Comments ({selectedPost.comments?.length || 0})
+                  {t.comments} ({selectedPost.comments?.length || 0})
                 </h3>
                 
                 {/* Comments List */}
@@ -825,8 +940,8 @@ export default function CommunityPage() {
                   {selectedPost.comments?.length === 0 ? (
                     <div className="text-center py-12 bg-gray-50 rounded-xl">
                       <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500 font-medium">No comments yet</p>
-                      <p className="text-gray-400 text-sm">Be the first to share your thoughts!</p>
+                      <p className="text-gray-500 font-medium">{t.noComments}</p>
+                      <p className="text-gray-400 text-sm">{t.beFirstComment}</p>
                     </div>
                   ) : (
                     selectedPost.comments?.map((comment) => (
@@ -852,7 +967,7 @@ export default function CommunityPage() {
                     type="text"
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Share your thoughts or advice..."
+                    placeholder={t.commentPlaceholder}
                     className="flex-1 px-5 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
                     onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
                   />
@@ -862,7 +977,7 @@ export default function CommunityPage() {
                     className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center gap-2 font-semibold shadow-lg transition-all"
                   >
                     <Send size={18} />
-                    Send
+                    {t.send}
                   </button>
                 </div>
               </div>

@@ -1,16 +1,172 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, ShoppingCart, Eye, Star, MapPin, Package, Leaf, X, ChevronLeft, ChevronRight, Plus, Upload, Check, Truck, Phone, CreditCard, ArrowLeft, Calendar } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Eye, Star, MapPin, Package, Leaf, X, ChevronLeft, ChevronRight, Plus, Upload, Check, Truck, Phone, CreditCard, ArrowLeft, Calendar, Globe } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useAuth } from '../context/AuthContext';
 
-// Initialize Stripe with your publishable key
 const stripePromise = loadStripe('pk_test_51SFEF9DrJ7nDJfDvIMnTuqgarlVwFixEnBIZiJJd5FWsljj92Tbrhux9NuGTkgaGHTaBoCwDZGBhOfYUBdgt1y1200w1OPqduz');
 
 const API_BASE_URL = 'http://localhost:8000';
 
-// Payment Form Component
-const CheckoutForm = ({ clientSecret, onSuccess, onCancel, totalAmount, orderNumber }) => {
+// Translations
+const translations = {
+  en: {
+    marketplace: 'Products Marketplace',
+    myOrders: 'My Orders',
+    mySales: 'My Sales',
+    listProduct: 'List Product',
+    seedData: 'Seed Data',
+    searchProducts: 'Search products...',
+    allCategories: 'All Categories',
+    district: 'District',
+    newest: 'Newest',
+    price: 'Price',
+    rating: 'Rating',
+    organicOnly: 'Organic Only',
+    noProducts: 'No products found',
+    viewDetails: 'View Details',
+    previous: 'Previous',
+    next: 'Next',
+    page: 'Page',
+    of: 'of',
+    backToMarketplace: 'Back to Marketplace',
+    noOrdersYet: 'No orders yet',
+    startShopping: 'Start shopping to see your orders here',
+    browseProducts: 'Browse Products',
+    order: 'Order',
+    seller: 'Seller',
+    quantity: 'Quantity',
+    noSalesYet: 'No sales yet',
+    listFirstProduct: 'List your first product to start selling',
+    customerDetails: 'Customer Details',
+    name: 'Name',
+    phone: 'Phone',
+    deliveryAddress: 'Delivery Address',
+    listNewProduct: 'List New Product',
+    productTitle: 'Product Title',
+    description: 'Description',
+    selectCategory: 'Select Category',
+    unit: 'Unit (e.g., per kg)',
+    stockAvailable: 'Stock Available',
+    stockUnit: 'Stock Unit',
+    location: 'Location',
+    organicCertified: 'Organic Certified',
+    uploadImages: 'Upload Images',
+    uploading: 'Uploading...',
+    cancel: 'Cancel',
+    createProduct: 'Create Product',
+    creating: 'Creating...',
+    stock: 'Stock',
+    orderNow: 'Order Now',
+    enterShippingDetails: 'Enter Shipping Details',
+    shippingAddress: 'Shipping Address',
+    fullName: 'Full Name',
+    phoneNumber: 'Phone Number',
+    addressLine1: 'Address Line 1 (House No, Building)',
+    addressLine2: 'Address Line 2 (Street, Locality)',
+    city: 'City',
+    state: 'State',
+    pincode: 'Pincode',
+    orderNotes: 'Order Notes (Optional)',
+    totalAmount: 'Total Amount',
+    proceedToPayment: 'Proceed to Payment',
+    completePayment: 'Complete Payment',
+    testCard: 'Test Card',
+    pay: 'Pay',
+    processing: 'Processing...',
+    paymentSuccessful: 'Payment Successful!',
+    deliveryInformation: 'Delivery Information',
+    address: 'Address',
+    sellerContact: 'The seller will contact you shortly to arrange delivery. You can track your order in "My Orders" section.',
+    viewMyOrders: 'View My Orders',
+    continueShopping: 'Continue Shopping',
+    min: 'Min',
+    max: 'Max',
+    certifiedOrganic: 'Certified Organic',
+    productCreated: 'Product created successfully!',
+    ordersCount: 'orders',
+    perUnit: 'per'
+  },
+  te: {
+    marketplace: 'ఉత్పత్తుల మార్కెట్',
+    myOrders: 'నా ఆర్డర్లు',
+    mySales: 'నా అమ్మకాలు',
+    listProduct: 'ఉత్పత్తిని జాబితా చేయండి',
+    seedData: 'డేటా సీడ్',
+    searchProducts: 'ఉత్పత్తులను వెతకండి...',
+    allCategories: 'అన్ని వర్గాలు',
+    district: 'జిల్లా',
+    newest: 'కొత్తవి',
+    price: 'ధర',
+    rating: 'రేటింగ్',
+    organicOnly: 'సేంద్రియ మాత్రమే',
+    noProducts: 'ఉత్పత్తులు కనుగొనబడలేదు',
+    viewDetails: 'వివరాలు చూడండి',
+    previous: 'మునుపటిది',
+    next: 'తదుపరి',
+    page: 'పేజీ',
+    of: 'యొక్క',
+    backToMarketplace: 'మార్కెట్‌కు తిరిగి వెళ్ళండి',
+    noOrdersYet: 'ఇంకా ఆర్డర్లు లేవు',
+    startShopping: 'మీ ఆర్డర్లను ఇక్కడ చూడటానికి షాపింగ్ ప్రారంభించండి',
+    browseProducts: 'ఉత్పత్తులను బ్రౌజ్ చేయండి',
+    order: 'ఆర్డర్',
+    seller: 'విక్రేత',
+    quantity: 'పరిమాణం',
+    noSalesYet: 'ఇంకా అమ్మకాలు లేవు',
+    listFirstProduct: 'అమ్మకం ప్రారంభించడానికి మీ మొదటి ఉత్పత్తిని జాబితా చేయండి',
+    customerDetails: 'కస్టమర్ వివరాలు',
+    name: 'పేరు',
+    phone: 'ఫోన్',
+    deliveryAddress: 'డెలివరీ చిరునామా',
+    listNewProduct: 'కొత్త ఉత్పత్తిని జాబితా చేయండి',
+    productTitle: 'ఉత్పత్తి శీర్షిక',
+    description: 'వివరణ',
+    selectCategory: 'వర్గం ఎంచుకోండి',
+    unit: 'యూనిట్ (ఉదా., కిలోకు)',
+    stockAvailable: 'స్టాక్ అందుబాటులో',
+    stockUnit: 'స్టాక్ యూనిట్',
+    location: 'స్థానం',
+    organicCertified: 'సేంద్రియ ధృవీకరించబడింది',
+    uploadImages: 'చిత్రాలను అప్‌లోడ్ చేయండి',
+    uploading: 'అప్‌లోడ్ అవుతోంది...',
+    cancel: 'రద్దు చేయండి',
+    createProduct: 'ఉత్పత్తిని సృష్టించండి',
+    creating: 'సృష్టిస్తోంది...',
+    stock: 'స్టాక్',
+    orderNow: 'ఇప్పుడే ఆర్డర్ చేయండి',
+    enterShippingDetails: 'షిప్పింగ్ వివరాలను నమోదు చేయండి',
+    shippingAddress: 'షిప్పింగ్ చిరునామా',
+    fullName: 'పూర్తి పేరు',
+    phoneNumber: 'ఫోన్ నంబర్',
+    addressLine1: 'చిరునామా లైన్ 1 (ఇంటి నంబర్, భవనం)',
+    addressLine2: 'చిరునామా లైన్ 2 (వీధి, ప్రాంతం)',
+    city: 'నగరం',
+    state: 'రాష్ట్రం',
+    pincode: 'పిన్‌కోడ్',
+    orderNotes: 'ఆర్డర్ గమనికలు (ఐచ్ఛికం)',
+    totalAmount: 'మొత్తం మొత్తం',
+    proceedToPayment: 'చెల్లింపుకు కొనసాగండి',
+    completePayment: 'చెల్లింపు పూర్తి చేయండి',
+    testCard: 'టెస్ట్ కార్డ్',
+    pay: 'చెల్లించండి',
+    processing: 'ప్రాసెస్ అవుతోంది...',
+    paymentSuccessful: 'చెల్లింపు విజయవంతమైంది!',
+    deliveryInformation: 'డెలివరీ సమాచారం',
+    address: 'చిరునామా',
+    sellerContact: 'విక్రేత త్వరలో డెలివరీని ఏర్పాటు చేయడానికి మిమ్మల్ని సంప్రదిస్తారు. మీరు "నా ఆర్డర్లు" విభాగంలో మీ ఆర్డర్‌ను ట్రాక్ చేయవచ్చు.',
+    viewMyOrders: 'నా ఆర్డర్లను చూడండి',
+    continueShopping: 'షాపింగ్ కొనసాగించండి',
+    min: 'కనిష్ట',
+    max: 'గరిష్ట',
+    certifiedOrganic: 'ధృవీకరించబడిన సేంద్రియ',
+    productCreated: 'ఉత్పత్తి విజయవంతంగా సృష్టించబడింది!',
+    ordersCount: 'ఆర్డర్లు',
+    perUnit: 'కు'
+  }
+};
+
+const CheckoutForm = ({ clientSecret, onSuccess, onCancel, totalAmount, orderNumber, t }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
@@ -46,7 +202,7 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, totalAmount, orderNum
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="text-sm text-gray-600 mb-2">Order #{orderNumber}</div>
+        <div className="text-sm text-gray-600 mb-2">{t.order} #{orderNumber}</div>
         <div className="text-3xl font-bold text-green-600">
           ₹{totalAmount.toFixed(2)}
         </div>
@@ -72,7 +228,7 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, totalAmount, orderNum
       )}
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-        💳 Test Card: 4000 0035 6000 0008 | Exp: 12/25 | CVC: 123
+        💳 {t.testCard}: 4000 0035 6000 0008 | Exp: 12/25 | CVC: 123
       </div>
 
       <div className="flex gap-3">
@@ -82,7 +238,7 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, totalAmount, orderNum
           className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
           disabled={processing}
         >
-          Cancel
+          {t.cancel}
         </button>
         <button
           type="submit"
@@ -92,12 +248,12 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, totalAmount, orderNum
           {processing ? (
             <>
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Processing...
+              {t.processing}
             </>
           ) : (
             <>
               <Check className="w-5 h-5" />
-              Pay ₹{totalAmount.toFixed(2)}
+              {t.pay} ₹{totalAmount.toFixed(2)}
             </>
           )}
         </button>
@@ -107,7 +263,10 @@ const CheckoutForm = ({ clientSecret, onSuccess, onCancel, totalAmount, orderNum
 };
 
 const Products = () => {
-  const [activeView, setActiveView] = useState('marketplace'); // marketplace, myOrders, mySales
+  const [language, setLanguage] = useState('en');
+  const t = translations[language];
+  
+  const [activeView, setActiveView] = useState('marketplace');
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +290,6 @@ const Products = () => {
     total_pages: 0
   });
   
-  // Address Form State (structured)
   const [shippingAddress, setShippingAddress] = useState({
     name: '',
     phone: '',
@@ -148,13 +306,12 @@ const Products = () => {
     buyer_notes: ''
   });
   
-  const [orderData, setOrderData] = useState(null); // Stores order response with payment intent
+  const [orderData, setOrderData] = useState(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   
-  // My Orders/Sales
   const [myOrders, setMyOrders] = useState([]);
   const [mySales, setMySales] = useState([]);
-  const {getToken} = useAuth()
+  const {getToken} = useAuth();
   
   const [productForm, setProductForm] = useState({
     title: '',
@@ -178,7 +335,6 @@ const Products = () => {
     fetchCategories();
     fetchProducts();
   }, [filters, pagination.page]);
-
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -310,7 +466,7 @@ const Products = () => {
       const data = await response.json();
       
       if (response.ok) {
-        alert('✅ Product created successfully!');
+        alert(`✅ ${t.productCreated}`);
         setShowCreateModal(false);
         resetProductForm();
         fetchProducts();
@@ -328,13 +484,11 @@ const Products = () => {
   const handleCreateOrder = async () => {
     if (!selectedProduct) return;
     
-    // Validate
     if (!orderForm.quantity || orderForm.quantity < 1) {
       alert('Please enter a valid quantity');
       return;
     }
     
-    // Validate address
     if (!shippingAddress.name || !shippingAddress.phone || !shippingAddress.address_line1 || 
         !shippingAddress.city || !shippingAddress.district || !shippingAddress.pincode) {
       alert('Please fill all required address fields');
@@ -477,7 +631,7 @@ const Products = () => {
         {product.organic_certified && (
           <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
             <Leaf className="w-3 h-3" />
-            Organic
+            {language === 'en' ? 'Organic' : 'సేంద్రియ'}
           </div>
         )}
       </div>
@@ -496,7 +650,7 @@ const Products = () => {
             <Star className="w-4 h-4 text-yellow-500 fill-current" />
             <span className="text-sm">{product.rating.toFixed(1)}</span>
           </div>
-          <span className="text-xs text-gray-500">({product.orders_count} orders)</span>
+          <span className="text-xs text-gray-500">({product.orders_count} {t.ordersCount})</span>
         </div>
         
         <div className="flex items-center justify-between mb-3">
@@ -505,7 +659,7 @@ const Products = () => {
             <div className="text-xs text-gray-500">{product.unit}</div>
           </div>
           <div className="text-sm text-gray-600">
-            Stock: {product.stock_available}
+            {t.stock}: {product.stock_available}
           </div>
         </div>
         
@@ -514,21 +668,19 @@ const Products = () => {
           className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
         >
           <Eye className="w-4 h-4" />
-          View Details
+          {t.viewDetails}
         </button>
       </div>
     </div>
   );
 
-  // Marketplace View
   const MarketplaceView = () => (
     <>
-      {/* Filters */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <div className="grid md:grid-cols-4 gap-4">
           <input
             type="text"
-            placeholder="Search products..."
+            placeholder={t.searchProducts}
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="px-3 py-2 border rounded-lg"
@@ -539,7 +691,7 @@ const Products = () => {
             onChange={(e) => handleFilterChange('category', e.target.value)}
             className="px-3 py-2 border rounded-lg"
           >
-            <option value="">All Categories</option>
+            <option value="">{t.allCategories}</option>
             {categories.map((cat) => (
               <option key={cat.value} value={cat.value}>
                 {cat.icon} {cat.label}
@@ -549,7 +701,7 @@ const Products = () => {
           
           <input
             type="text"
-            placeholder="District"
+            placeholder={t.district}
             value={filters.district}
             onChange={(e) => handleFilterChange('district', e.target.value)}
             className="px-3 py-2 border rounded-lg"
@@ -560,9 +712,9 @@ const Products = () => {
             onChange={(e) => handleFilterChange('sort_by', e.target.value)}
             className="px-3 py-2 border rounded-lg"
           >
-            <option value="created_at">Newest</option>
-            <option value="price">Price</option>
-            <option value="rating">Rating</option>
+            <option value="created_at">{t.newest}</option>
+            <option value="price">{t.price}</option>
+            <option value="rating">{t.rating}</option>
           </select>
         </div>
         
@@ -574,11 +726,10 @@ const Products = () => {
             className="w-4 h-4"
           />
           <Leaf className="w-4 h-4 text-green-600" />
-          Organic Only
+          {t.organicOnly}
         </label>
       </div>
       
-      {/* Products Grid */}
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -586,7 +737,7 @@ const Products = () => {
       ) : products.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg">
           <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No products found</p>
+          <p className="text-gray-600">{t.noProducts}</p>
         </div>
       ) : (
         <>
@@ -596,7 +747,6 @@ const Products = () => {
             ))}
           </div>
           
-          {/* Pagination */}
           {pagination.total_pages > 1 && (
             <div className="flex justify-center items-center gap-4">
               <button
@@ -605,11 +755,11 @@ const Products = () => {
                 className="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2"
               >
                 <ChevronLeft className="w-4 h-4" />
-                Previous
+                {t.previous}
               </button>
               
               <span className="text-gray-600">
-                Page {pagination.page} of {pagination.total_pages}
+                {t.page} {pagination.page} {t.of} {pagination.total_pages}
               </span>
               
               <button
@@ -617,7 +767,7 @@ const Products = () => {
                 disabled={pagination.page === pagination.total_pages}
                 className="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2"
               >
-                Next
+                {t.next}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -627,30 +777,29 @@ const Products = () => {
     </>
   );
 
-  // My Orders View
   const MyOrdersView = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">My Orders</h2>
+        <h2 className="text-2xl font-bold">{t.myOrders}</h2>
         <button
           onClick={() => setActiveView('marketplace')}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="w-5 h-5" />
-          Back to Marketplace
+          {t.backToMarketplace}
         </button>
       </div>
 
       {myOrders.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
-          <p className="text-gray-600 mb-4">Start shopping to see your orders here</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{t.noOrdersYet}</h3>
+          <p className="text-gray-600 mb-4">{t.startShopping}</p>
           <button
             onClick={() => setActiveView('marketplace')}
             className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
-            Browse Products
+            {t.browseProducts}
           </button>
         </div>
       ) : (
@@ -659,7 +808,7 @@ const Products = () => {
             <div key={order.id} className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Order #{order.order_number}</h3>
+                  <h3 className="font-semibold text-gray-900">{t.order} #{order.order_number}</h3>
                   <p className="text-sm text-gray-600">{new Date(order.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-2">
@@ -686,8 +835,8 @@ const Products = () => {
                 </div>
                 <div className="flex-1">
                   <h4 className="font-medium text-gray-900">{order.product_title}</h4>
-                  <p className="text-sm text-gray-600">Seller: {order.seller_name}</p>
-                  <p className="text-sm text-gray-600">Quantity: {order.quantity} {order.unit}</p>
+                  <p className="text-sm text-gray-600">{t.seller}: {order.seller_name}</p>
+                  <p className="text-sm text-gray-600">{t.quantity}: {order.quantity} {order.unit}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-green-600">
@@ -702,30 +851,29 @@ const Products = () => {
     </div>
   );
 
-  // My Sales View
   const MySalesView = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">My Sales</h2>
+        <h2 className="text-2xl font-bold">{t.mySales}</h2>
         <button
           onClick={() => setActiveView('marketplace')}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="w-5 h-5" />
-          Back to Marketplace
+          {t.backToMarketplace}
         </button>
       </div>
 
       {mySales.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No sales yet</h3>
-          <p className="text-gray-600 mb-4">List your first product to start selling</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{t.noSalesYet}</h3>
+          <p className="text-gray-600 mb-4">{t.listFirstProduct}</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
-            List Product
+            {t.listProduct}
           </button>
         </div>
       ) : (
@@ -734,7 +882,7 @@ const Products = () => {
             <div key={sale.id} className="bg-white rounded-lg border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Order #{sale.order_number}</h3>
+                  <h3 className="font-semibold text-gray-900">{t.order} #{sale.order_number}</h3>
                   <p className="text-sm text-gray-600">{new Date(sale.created_at).toLocaleDateString()}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -749,26 +897,26 @@ const Products = () => {
               <div className="space-y-3">
                 <div>
                   <h4 className="font-medium text-gray-900">{sale.product_title}</h4>
-                  <p className="text-sm text-gray-600">Quantity: {sale.quantity} {sale.unit}</p>
+                  <p className="text-sm text-gray-600">{t.quantity}: {sale.quantity} {sale.unit}</p>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h5 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
                     <Phone className="w-4 h-4" />
-                    Customer Details
+                    {t.customerDetails}
                   </h5>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <p><strong>Name:</strong> {sale.buyer_name}</p>
-                    <p><strong>Phone:</strong> {sale.buyer_phone}</p>
+                    <p><strong>{t.name}:</strong> {sale.buyer_name}</p>
+                    <p><strong>{t.phone}:</strong> {sale.buyer_phone}</p>
                     {sale.buyer_address && (
                       <>
-                        <p className="mt-2"><strong>Delivery Address:</strong></p>
+                        <p className="mt-2"><strong>{t.deliveryAddress}:</strong></p>
                         <p>{sale.buyer_address.name}</p>
                         <p>{sale.buyer_address.address_line1}</p>
                         {sale.buyer_address.address_line2 && <p>{sale.buyer_address.address_line2}</p>}
                         <p>{sale.buyer_address.city}, {sale.buyer_address.district}</p>
                         <p>{sale.buyer_address.state} - {sale.buyer_address.pincode}</p>
-                        <p><strong>Phone:</strong> {sale.buyer_address.phone}</p>
+                        <p><strong>{t.phone}:</strong> {sale.buyer_address.phone}</p>
                       </>
                     )}
                   </div>
@@ -792,52 +940,51 @@ const Products = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold">Products Marketplace</h1>
-            <div className="flex gap-3">
+            <h1 className="text-3xl font-bold">{t.marketplace}</h1>
+            <div className="flex gap-3 items-center">
+              <button
+                onClick={() => setLanguage(language === 'en' ? 'te' : 'en')}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center gap-2"
+              >
+                <Globe className="w-5 h-5" />
+                {language === 'en' ? 'తెలుగు' : 'English'}
+              </button>
               <button
                 onClick={fetchMyOrders}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
               >
                 <Package className="w-5 h-5" />
-                My Orders
+                {t.myOrders}
               </button>
               <button
                 onClick={fetchMySales}
                 className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2"
               >
                 <Truck className="w-5 h-5" />
-                My Sales
+                {t.mySales}
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                List Product
+                {t.listProduct}
               </button>
-              <button
-                onClick={handleSeedData}
-                disabled={seeding}
-                className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 disabled:bg-gray-400"
-              >
-                {seeding ? 'Seeding...' : 'Seed Data'}
-              </button>
+            
             </div>
           </div>
         </div>
         
-        {/* Render Views */}
         {activeView === 'marketplace' && <MarketplaceView />}
         {activeView === 'myOrders' && <MyOrdersView />}
         {activeView === 'mySales' && <MySalesView />}
       </div>
       
-      {/* Create Product Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">List New Product</h2>
+              <h2 className="text-2xl font-bold">{t.listNewProduct}</h2>
               <button onClick={() => { setShowCreateModal(false); resetProductForm(); }}>
                 <X className="w-6 h-6" />
               </button>
@@ -846,14 +993,14 @@ const Products = () => {
             <div className="p-6 space-y-4">
               <input
                 type="text"
-                placeholder="Product Title *"
+                placeholder={`${t.productTitle} *`}
                 value={productForm.title}
                 onChange={(e) => setProductForm({ ...productForm, title: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
               
               <textarea
-                placeholder="Description *"
+                placeholder={`${t.description} *`}
                 value={productForm.description}
                 onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                 rows={3}
@@ -866,7 +1013,7 @@ const Products = () => {
                   onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select Category *</option>
+                  <option value="">{t.selectCategory} *</option>
                   {categories.map((cat) => (
                     <option key={cat.value} value={cat.value}>
                       {cat.icon} {cat.label}
@@ -877,7 +1024,7 @@ const Products = () => {
                 <input
                   type="number"
                   step="0.01"
-                  placeholder="Price *"
+                  placeholder={`${t.price} *`}
                   value={productForm.price}
                   onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -885,7 +1032,7 @@ const Products = () => {
                 
                 <input
                   type="text"
-                  placeholder="Unit (e.g., per kg) *"
+                  placeholder={`${t.unit} *`}
                   value={productForm.unit}
                   onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -893,7 +1040,7 @@ const Products = () => {
                 
                 <input
                   type="number"
-                  placeholder="Stock Available *"
+                  placeholder={`${t.stockAvailable} *`}
                   value={productForm.stock_available}
                   onChange={(e) => setProductForm({ ...productForm, stock_available: e.target.value })}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -901,7 +1048,7 @@ const Products = () => {
                 
                 <input
                   type="text"
-                  placeholder="Stock Unit *"
+                  placeholder={`${t.stockUnit} *`}
                   value={productForm.stock_unit}
                   onChange={(e) => setProductForm({ ...productForm, stock_unit: e.target.value })}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -909,7 +1056,7 @@ const Products = () => {
                 
                 <input
                   type="text"
-                  placeholder="Location *"
+                  placeholder={`${t.location} *`}
                   value={productForm.location}
                   onChange={(e) => setProductForm({ ...productForm, location: e.target.value })}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -917,7 +1064,7 @@ const Products = () => {
                 
                 <input
                   type="text"
-                  placeholder="District *"
+                  placeholder={`${t.district} *`}
                   value={productForm.district}
                   onChange={(e) => setProductForm({ ...productForm, district: e.target.value })}
                   className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -925,7 +1072,7 @@ const Products = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-2">Upload Images</label>
+                <label className="block text-sm font-medium mb-2">{t.uploadImages}</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -933,7 +1080,7 @@ const Products = () => {
                   disabled={uploadingImage}
                   className="w-full px-3 py-2 border rounded-lg"
                 />
-                {uploadingImage && <p className="text-sm text-blue-600 mt-1">Uploading...</p>}
+                {uploadingImage && <p className="text-sm text-blue-600 mt-1">{t.uploading}</p>}
                 {productForm.images.length > 0 && (
                   <div className="flex gap-2 mt-2 flex-wrap">
                     {productForm.images.map((url, idx) => (
@@ -962,7 +1109,7 @@ const Products = () => {
                   className="w-4 h-4 text-green-600 rounded"
                 />
                 <Leaf className="w-4 h-4 text-green-600" />
-                <span>Organic Certified</span>
+                <span>{t.organicCertified}</span>
               </label>
               
               <div className="flex gap-3 pt-4 border-t">
@@ -970,14 +1117,14 @@ const Products = () => {
                   onClick={() => { setShowCreateModal(false); resetProductForm(); }}
                   className="flex-1 px-4 py-3 border rounded-lg hover:bg-gray-50 font-semibold"
                 >
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button
                   onClick={handleCreateProduct}
                   disabled={creating || !productForm.title || !productForm.price || !productForm.category}
                   className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-semibold"
                 >
-                  {creating ? 'Creating...' : 'Create Product'}
+                  {creating ? t.creating : t.createProduct}
                 </button>
               </div>
             </div>
@@ -985,7 +1132,6 @@ const Products = () => {
         </div>
       )}
       
-      {/* Product Detail Modal */}
       {selectedProduct && !showOrderModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -1023,21 +1169,21 @@ const Products = () => {
                   {selectedProduct.organic_certified && (
                     <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full mb-4">
                       <Leaf className="w-4 h-4" />
-                      Certified Organic
+                      {t.certifiedOrganic}
                     </div>
                   )}
                   
                   <div className="space-y-3 mb-6">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Stock:</span>
+                      <span className="text-gray-600">{t.stock}:</span>
                       <span className="font-semibold">{selectedProduct.stock_available} {selectedProduct.stock_unit}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Location:</span>
+                      <span className="text-gray-600">{t.location}:</span>
                       <span className="font-semibold">{selectedProduct.location}, {selectedProduct.district}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Seller:</span>
+                      <span className="text-gray-600">{t.seller}:</span>
                       <span className="font-semibold">{selectedProduct.seller.name}</span>
                     </div>
                   </div>
@@ -1050,13 +1196,13 @@ const Products = () => {
                     className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 text-lg font-semibold"
                   >
                     <ShoppingCart className="w-5 h-5" />
-                    Order Now
+                    {t.orderNow}
                   </button>
                 </div>
               </div>
               
               <div className="border-t pt-6">
-                <h3 className="text-xl font-semibold mb-3">Description</h3>
+                <h3 className="text-xl font-semibold mb-3">{t.description}</h3>
                 <p className="text-gray-700 whitespace-pre-wrap">{selectedProduct.description}</p>
               </div>
             </div>
@@ -1064,19 +1210,17 @@ const Products = () => {
         </div>
       )}
       
-      {/* Order Modal (Address Collection) */}
       {showOrderModal && selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Enter Shipping Details</h2>
+              <h2 className="text-2xl font-bold">{t.enterShippingDetails}</h2>
               <button onClick={() => setShowOrderModal(false)}>
                 <X className="w-6 h-6" />
               </button>
             </div>
             
             <div className="p-6">
-              {/* Product Summary */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <div className="flex items-center gap-4 mb-3">
                   <div className="w-16 h-16 bg-gray-200 rounded">
@@ -1086,12 +1230,12 @@ const Products = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold">{selectedProduct.title}</h3>
-                    <p className="text-sm text-gray-600">₹{selectedProduct.price} per {selectedProduct.unit}</p>
+                    <p className="text-sm text-gray-600">₹{selectedProduct.price} {t.perUnit} {selectedProduct.unit}</p>
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Quantity *</label>
+                  <label className="block text-sm font-medium mb-2">{t.quantity} *</label>
                   <input
                     type="number"
                     min={selectedProduct.min_order_quantity || 1}
@@ -1100,24 +1244,23 @@ const Products = () => {
                     onChange={(e) => setOrderForm({ ...orderForm, quantity: parseInt(e.target.value) || 1 })}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Min: {selectedProduct.min_order_quantity || 1}, Max: {selectedProduct.stock_available}</p>
+                  <p className="text-xs text-gray-500 mt-1">{t.min}: {selectedProduct.min_order_quantity || 1}, {t.max}: {selectedProduct.stock_available}</p>
                 </div>
               </div>
 
-              {/* Shipping Address Form */}
-              <h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
+              <h3 className="text-lg font-semibold mb-4">{t.shippingAddress}</h3>
               <div className="space-y-4 mb-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="Full Name *"
+                    placeholder={`${t.fullName} *`}
                     value={shippingAddress.name}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, name: e.target.value })}
                     className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     type="tel"
-                    placeholder="Phone Number *"
+                    placeholder={`${t.phoneNumber} *`}
                     value={shippingAddress.phone}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, phone: e.target.value })}
                     className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1126,7 +1269,7 @@ const Products = () => {
 
                 <input
                   type="text"
-                  placeholder="Address Line 1 (House No, Building) *"
+                  placeholder={`${t.addressLine1} *`}
                   value={shippingAddress.address_line1}
                   onChange={(e) => setShippingAddress({ ...shippingAddress, address_line1: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1134,7 +1277,7 @@ const Products = () => {
 
                 <input
                   type="text"
-                  placeholder="Address Line 2 (Street, Locality)"
+                  placeholder={t.addressLine2}
                   value={shippingAddress.address_line2}
                   onChange={(e) => setShippingAddress({ ...shippingAddress, address_line2: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1143,14 +1286,14 @@ const Products = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="City *"
+                    placeholder={`${t.city} *`}
                     value={shippingAddress.city}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
                     className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     type="text"
-                    placeholder="District *"
+                    placeholder={`${t.district} *`}
                     value={shippingAddress.district}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, district: e.target.value })}
                     className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1160,14 +1303,14 @@ const Products = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <input
                     type="text"
-                    placeholder="State *"
+                    placeholder={`${t.state} *`}
                     value={shippingAddress.state}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
                     className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                   <input
                     type="text"
-                    placeholder="Pincode *"
+                    placeholder={`${t.pincode} *`}
                     value={shippingAddress.pincode}
                     onChange={(e) => setShippingAddress({ ...shippingAddress, pincode: e.target.value })}
                     className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1175,7 +1318,7 @@ const Products = () => {
                 </div>
 
                 <textarea
-                  placeholder="Order Notes (Optional)"
+                  placeholder={t.orderNotes}
                   value={orderForm.buyer_notes}
                   onChange={(e) => setOrderForm({ ...orderForm, buyer_notes: e.target.value })}
                   rows={2}
@@ -1183,10 +1326,9 @@ const Products = () => {
                 />
               </div>
               
-              {/* Total */}
               <div className="bg-gray-50 p-4 rounded-lg mb-6">
                 <div className="flex justify-between text-lg font-semibold">
-                  <span>Total Amount:</span>
+                  <span>{t.totalAmount}:</span>
                   <span className="text-green-600">₹{(selectedProduct.price * orderForm.quantity).toFixed(2)}</span>
                 </div>
               </div>
@@ -1196,7 +1338,7 @@ const Products = () => {
                   onClick={() => setShowOrderModal(false)}
                   className="flex-1 px-4 py-3 border rounded-lg hover:bg-gray-50 font-semibold"
                 >
-                  Cancel
+                  {t.cancel}
                 </button>
                 <button
                   onClick={handleCreateOrder}
@@ -1206,7 +1348,7 @@ const Products = () => {
                   className="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 font-semibold flex items-center justify-center gap-2"
                 >
                   <CreditCard className="w-5 h-5" />
-                  Proceed to Payment
+                  {t.proceedToPayment}
                 </button>
               </div>
             </div>
@@ -1214,11 +1356,10 @@ const Products = () => {
         </div>
       )}
 
-      {/* Payment Modal */}
       {showPaymentModal && orderData && !paymentSuccess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-6">Complete Payment</h2>
+            <h2 className="text-2xl font-bold mb-6">{t.completePayment}</h2>
             <Elements stripe={stripePromise}>
               <CheckoutForm
                 clientSecret={orderData.client_secret}
@@ -1229,13 +1370,13 @@ const Products = () => {
                   setShowPaymentModal(false);
                   setOrderData(null);
                 }}
+                t={t}
               />
             </Elements>
           </div>
         </div>
       )}
 
-      {/* Payment Success Modal */}
       {paymentSuccess && orderData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -1243,18 +1384,18 @@ const Products = () => {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check className="w-8 h-8 text-green-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-              <p className="text-gray-600 mb-4">Order #{orderData.order_number}</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{t.paymentSuccessful}</h2>
+              <p className="text-gray-600 mb-4">{t.order} #{orderData.order_number}</p>
               
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
                 <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
                   <Truck className="w-5 h-5" />
-                  Delivery Information
+                  {t.deliveryInformation}
                 </h3>
                 <div className="text-sm text-blue-800 space-y-1">
-                  <p><strong>Name:</strong> {shippingAddress.name}</p>
-                  <p><strong>Phone:</strong> {shippingAddress.phone}</p>
-                  <p><strong>Address:</strong></p>
+                  <p><strong>{t.name}:</strong> {shippingAddress.name}</p>
+                  <p><strong>{t.phone}:</strong> {shippingAddress.phone}</p>
+                  <p><strong>{t.address}:</strong></p>
                   <p>{shippingAddress.address_line1}</p>
                   {shippingAddress.address_line2 && <p>{shippingAddress.address_line2}</p>}
                   <p>{shippingAddress.city}, {shippingAddress.district}</p>
@@ -1264,7 +1405,7 @@ const Products = () => {
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-green-800">
-                  ✅ The seller will contact you shortly to arrange delivery. You can track your order in "My Orders" section.
+                  ✅ {t.sellerContact}
                 </p>
               </div>
 
@@ -1279,7 +1420,7 @@ const Products = () => {
                   }}
                   className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
                 >
-                  View My Orders
+                  {t.viewMyOrders}
                 </button>
                 <button
                   onClick={() => {
@@ -1291,7 +1432,7 @@ const Products = () => {
                   }}
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-semibold"
                 >
-                  Continue Shopping
+                  {t.continueShopping}
                 </button>
               </div>
             </div>

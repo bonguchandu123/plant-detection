@@ -172,7 +172,7 @@ const Chatbot = () => {
 
     } catch (error) {
       setIsTyping(false);
-      setIsLoading(false);
+      setIsLoading(false)
       
       const errorMsg = error.response?.data?.detail || error.message || 'Sorry, I encountered an error. Please try again.';
       addBotMessage(errorMsg);
@@ -254,7 +254,7 @@ const Chatbot = () => {
         className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full p-4 shadow-2xl transition-all duration-300 hover:scale-110 flex items-center gap-3 group"
       >
         <MessageCircle size={24} className="group-hover:rotate-12 transition-transform" />
-        <div className="hidden sm:block">
+        <div className="hidden">
           <span className="font-bold block">AI Chat</span>
           <span className="text-xs text-blue-100">Get instant help</span>
         </div>

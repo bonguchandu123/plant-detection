@@ -12,14 +12,124 @@ import {
   XCircle,
   Info,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Languages
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const API_BASE = 'http://localhost:8000';
 
-// Mock auth hook for demo
-
+// Translations
+const translations = {
+  en: {
+    weatherAdvisory: 'Weather Advisory',
+    refresh: 'Refresh',
+    preferences: 'Preferences',
+    currentWeather: 'Current Weather',
+    forecast7Day: '7-Day Forecast',
+    alerts: 'Alerts',
+    location: 'Location',
+    lastUpdated: 'Last updated',
+    temperature: 'Temperature',
+    humidity: 'Humidity',
+    rainfall: 'Rainfall',
+    windSpeed: 'Wind Speed',
+    farmingAdvisory: 'Farming Advisory',
+    weatherForecast: '7-Day Weather Forecast',
+    noForecast: 'No forecast data available',
+    noActiveAlerts: 'No Active Alerts',
+    notifiedWhen: "You'll be notified when weather conditions require attention",
+    stayTuned: 'Stay tuned for important weather updates',
+    youHave: 'You have',
+    activeWeatherAlerts: 'active weather alerts',
+    activeWeatherAlert: 'active weather alert',
+    alert: 'Alert',
+    recommendedAction: 'Recommended Action',
+    affectedCrops: 'Affected Crops',
+    acknowledge: 'Acknowledge',
+    processing: 'Processing...',
+    priority: 'PRIORITY',
+    highPriority: 'HIGH PRIORITY',
+    mediumPriority: 'MEDIUM PRIORITY',
+    lowPriority: 'LOW PRIORITY',
+    weatherAlertPreferences: 'Weather Alert Preferences',
+    cancel: 'Cancel',
+    savePreferences: 'Save Preferences',
+    saving: 'Saving...',
+    alertTypes: 'Alert Types',
+    generalWeatherAlerts: 'General Weather Alerts',
+    rainfallAlerts: 'Rainfall Alerts',
+    temperatureAlerts: 'Temperature Alerts',
+    stormAlerts: 'Storm Alerts',
+    alertThresholds: 'Alert Thresholds',
+    highTemperature: 'High Temperature (°C)',
+    lowTemperature: 'Low Temperature (°C)',
+    heavyRainThreshold: 'Heavy Rain Threshold (mm)',
+    alertTiming: 'Alert Timing',
+    morningAlerts: 'Morning Alerts (6-10 AM)',
+    eveningAlerts: 'Evening Alerts (5-8 PM)',
+    loadingWeather: 'Loading weather data...',
+    failedToFetch: 'Failed to fetch weather data. Please try again.',
+    urgent: 'URGENT',
+    high: 'HIGH',
+    medium: 'MEDIUM',
+    low: 'LOW'
+  },
+  te: {
+    weatherAdvisory: 'వాతావరణ సలహా',
+    refresh: 'రిఫ్రెష్',
+    preferences: 'ప్రాధాన్యతలు',
+    currentWeather: 'ప్రస్తుత వాతావరణం',
+    forecast7Day: '7-రోజుల అంచనా',
+    alerts: 'హెచ్చరికలు',
+    location: 'స్థలం',
+    lastUpdated: 'చివరిగా నవీకరించబడింది',
+    temperature: 'ఉష్ణోగ్రత',
+    humidity: 'తేమ',
+    rainfall: 'వర్షపాతం',
+    windSpeed: 'గాలి వేగం',
+    farmingAdvisory: 'వ్యవసాయ సలహా',
+    weatherForecast: '7-రోజుల వాతావరణ అంచనా',
+    noForecast: 'అంచనా డేటా అందుబాటులో లేదు',
+    noActiveAlerts: 'చురుకైన హెచ్చరికలు లేవు',
+    notifiedWhen: 'వాతావరణ పరిస్థితులకు శ్రద్ధ అవసరమైనప్పుడు మీకు తెలియజేయబడుతుంది',
+    stayTuned: 'ముఖ్యమైన వాతావరణ నవీకరణల కోసం వేచి ఉండండి',
+    youHave: 'మీకు ఉన్నాయి',
+    activeWeatherAlerts: 'చురుకైన వాతావరణ హెచ్చరికలు',
+    activeWeatherAlert: 'చురుకైన వాతావరణ హెచ్చరిక',
+    alert: 'హెచ్చరిక',
+    recommendedAction: 'సిफారసు చర్య',
+    affectedCrops: 'ప్రభావిత పంటలు',
+    acknowledge: 'అంగీకరించు',
+    processing: 'ప్రాసెస్ చేస్తోంది...',
+    priority: 'ప్రాధాన్యత',
+    highPriority: 'అధిక ప్రాధాన్యత',
+    mediumPriority: 'మధ్యస్థ ప్రాధాన్యత',
+    lowPriority: 'తక్కువ ప్రాధాన్యత',
+    weatherAlertPreferences: 'వాతావరణ హెచ్చరిక ప్రాధాన్యతలు',
+    cancel: 'రద్దు చేయి',
+    savePreferences: 'ప్రాధాన్యతలను సేవ్ చేయండి',
+    saving: 'సేవ్ చేస్తోంది...',
+    alertTypes: 'హెచ్చరిక రకాలు',
+    generalWeatherAlerts: 'సాధారణ వాతావరణ హెచ్చరికలు',
+    rainfallAlerts: 'వర్షపాతం హెచ్చరికలు',
+    temperatureAlerts: 'ఉష్ణోగ్రత హెచ్చరికలు',
+    stormAlerts: 'తుఫాను హెచ్చరికలు',
+    alertThresholds: 'హెచ్చరిక పరిమితులు',
+    highTemperature: 'అధిక ఉష్ణోగ్రత (°C)',
+    lowTemperature: 'తక్కువ ఉష్ణోగ్రత (°C)',
+    heavyRainThreshold: 'భారీ వర్షం పరిమితి (mm)',
+    alertTiming: 'హెచ్చరిక సమయం',
+    morningAlerts: 'ఉదయం హెచ్చరికలు (6-10 AM)',
+    eveningAlerts: 'సాయంత్రం హెచ్చరికలు (5-8 PM)',
+    loadingWeather: 'వాతావరణ డేటాను లోడ్ చేస్తోంది...',
+    failedToFetch: 'వాతావరణ డేటాను పొందడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.',
+    urgent: 'అత్యవసరం',
+    high: 'అధికం',
+    medium: 'మధ్యస్థం',
+    low: 'తక్కువ'
+  }
+};
 
 const WeatherCard = ({ icon: Icon, label, value, unit = '', color = 'blue' }) => (
   <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow">
@@ -31,8 +141,9 @@ const WeatherCard = ({ icon: Icon, label, value, unit = '', color = 'blue' }) =>
   </div>
 );
 
-const AlertCard = ({ alert, onAcknowledge }) => {
+const AlertCard = ({ alert, onAcknowledge, lang = 'en' }) => {
   const [acknowledging, setAcknowledging] = useState(false);
+  const t = translations[lang];
 
   const severityConfig = {
     urgent: { 
@@ -73,6 +184,16 @@ const AlertCard = ({ alert, onAcknowledge }) => {
     setAcknowledging(false);
   };
 
+  const getSeverityText = (severity) => {
+    const severityMap = {
+      urgent: t.urgent,
+      high: t.high,
+      medium: t.medium,
+      low: t.low
+    };
+    return severityMap[severity] || severity.toUpperCase();
+  };
+
   return (
     <div className={`${config.bg} ${config.border} border-2 rounded-xl p-6 shadow-sm hover:shadow-md transition-all`}>
       <div className="flex items-start gap-4">
@@ -83,10 +204,10 @@ const AlertCard = ({ alert, onAcknowledge }) => {
           <div className="flex items-start justify-between mb-2">
             <div>
               <h3 className={`font-bold text-lg ${config.text} mb-1`}>
-                {alert.type.charAt(0).toUpperCase() + alert.type.slice(1)} Alert
+                {alert.type.charAt(0).toUpperCase() + alert.type.slice(1)} {t.alert}
               </h3>
               <span className={`text-xs px-3 py-1 rounded-full ${config.badge} font-semibold border inline-block`}>
-                {alert.severity.toUpperCase()}
+                {getSeverityText(alert.severity)}
               </span>
             </div>
           </div>
@@ -99,7 +220,7 @@ const AlertCard = ({ alert, onAcknowledge }) => {
             <div className={`mb-4 p-3 rounded-lg bg-white border ${config.border}`}>
               <p className={`text-sm font-semibold ${config.text} mb-1 flex items-center gap-2`}>
                 <AlertCircle className="h-4 w-4" />
-                Recommended Action:
+                {t.recommendedAction}:
               </p>
               <p className="text-sm text-gray-700 ml-6">{alert.recommended_action}</p>
             </div>
@@ -107,7 +228,7 @@ const AlertCard = ({ alert, onAcknowledge }) => {
           
           {alert.affected_crops && alert.affected_crops.length > 0 && (
             <div className="mb-4 p-3 rounded-lg bg-white border border-gray-200">
-              <p className="text-xs font-semibold text-gray-700 mb-1">Affected Crops:</p>
+              <p className="text-xs font-semibold text-gray-700 mb-1">{t.affectedCrops}:</p>
               <div className="flex flex-wrap gap-2 mt-2">
                 {alert.affected_crops.map((crop, i) => (
                   <span key={i} className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-md border border-green-200">
@@ -121,7 +242,7 @@ const AlertCard = ({ alert, onAcknowledge }) => {
           <div className="flex items-center justify-between pt-3 border-t border-gray-200">
             <p className="text-xs text-gray-600 flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {new Date(alert.timestamp).toLocaleString('en-US', {
+              {new Date(alert.timestamp).toLocaleString(lang === 'te' ? 'te-IN' : 'en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
@@ -137,12 +258,12 @@ const AlertCard = ({ alert, onAcknowledge }) => {
               {acknowledging ? (
                 <>
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  Processing...
+                  {t.processing}
                 </>
               ) : (
                 <>
                   <CheckCircle className="h-4 w-4" />
-                  Acknowledge
+                  {t.acknowledge}
                 </>
               )}
             </button>
@@ -153,32 +274,46 @@ const AlertCard = ({ alert, onAcknowledge }) => {
   );
 };
 
-const AdvisoryCard = ({ advisory }) => (
-  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 shadow-sm">
-    <div className="flex items-start justify-between mb-4">
-      <h3 className="font-bold text-green-900 text-lg">{advisory.message}</h3>
-      <span className={`text-xs px-3 py-1 rounded-full font-semibold border ${
-        advisory.priority === 'high' ? 'bg-red-100 text-red-800 border-red-200' :
-        advisory.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-        'bg-blue-100 text-blue-800 border-blue-200'
-      }`}>
-        {advisory.priority.toUpperCase()} PRIORITY
-      </span>
-    </div>
-    <ul className="space-y-3">
-      {advisory.recommendations.map((rec, i) => (
-        <li key={i} className="flex items-start gap-3 text-green-900 text-sm">
-          <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0 text-green-600" />
-          <span className="leading-relaxed">{rec}</span>
-        </li>
-      ))}
-    </ul>
-  </div>
-);
+const AdvisoryCard = ({ advisory, lang = 'en' }) => {
+  const t = translations[lang];
+  
+  const getPriorityText = (priority) => {
+    const priorityMap = {
+      high: t.highPriority,
+      medium: t.mediumPriority,
+      low: t.lowPriority
+    };
+    return priorityMap[priority] || priority.toUpperCase() + ' ' + t.priority;
+  };
 
-const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
+  return (
+    <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 shadow-sm">
+      <div className="flex items-start justify-between mb-4">
+        <h3 className="font-bold text-green-900 text-lg">{advisory.message}</h3>
+        <span className={`text-xs px-3 py-1 rounded-full font-semibold border ${
+          advisory.priority === 'high' ? 'bg-red-100 text-red-800 border-red-200' :
+          advisory.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+          'bg-blue-100 text-blue-800 border-blue-200'
+        }`}>
+          {getPriorityText(advisory.priority)}
+        </span>
+      </div>
+      <ul className="space-y-3">
+        {advisory.recommendations.map((rec, i) => (
+          <li key={i} className="flex items-start gap-3 text-green-900 text-sm">
+            <CheckCircle className="h-5 w-5 mt-0.5 flex-shrink-0 text-green-600" />
+            <span className="leading-relaxed">{rec}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+const PreferencesModal = ({ isOpen, onClose, preferences, onSave, lang = 'en' }) => {
   const [formData, setFormData] = useState(preferences);
   const [saving, setSaving] = useState(false);
+  const t = translations[lang];
 
   useEffect(() => {
     setFormData(preferences);
@@ -196,7 +331,7 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Weather Alert Preferences</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t.weatherAlertPreferences}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 transition-colors">
             <XCircle className="h-6 w-6" />
           </button>
@@ -204,13 +339,13 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
 
         <div className="space-y-6">
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Alert Types</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t.alertTypes}</h3>
             <div className="space-y-2">
               {[
-                { key: 'enable_weather_alerts', label: 'General Weather Alerts' },
-                { key: 'enable_rainfall_alerts', label: 'Rainfall Alerts' },
-                { key: 'enable_temperature_alerts', label: 'Temperature Alerts' },
-                { key: 'enable_storm_alerts', label: 'Storm Alerts' }
+                { key: 'enable_weather_alerts', label: t.generalWeatherAlerts },
+                { key: 'enable_rainfall_alerts', label: t.rainfallAlerts },
+                { key: 'enable_temperature_alerts', label: t.temperatureAlerts },
+                { key: 'enable_storm_alerts', label: t.stormAlerts }
               ].map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
                   <input
@@ -226,10 +361,10 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Alert Thresholds</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t.alertThresholds}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">High Temperature (°C)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.highTemperature}</label>
                 <input
                   type="number"
                   value={formData.high_temp_threshold}
@@ -238,7 +373,7 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Low Temperature (°C)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.lowTemperature}</label>
                 <input
                   type="number"
                   value={formData.low_temp_threshold}
@@ -247,7 +382,7 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Heavy Rain Threshold (mm)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t.heavyRainThreshold}</label>
                 <input
                   type="number"
                   value={formData.heavy_rain_threshold}
@@ -259,7 +394,7 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
           </div>
 
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Alert Timing</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t.alertTiming}</h3>
             <div className="space-y-2">
               <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
                 <input
@@ -268,7 +403,7 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
                   onChange={(e) => setFormData({ ...formData, morning_alert: e.target.checked })}
                   className="w-4 h-4 text-green-600 rounded"
                 />
-                <span className="text-sm text-gray-700">Morning Alerts (6-10 AM)</span>
+                <span className="text-sm text-gray-700">{t.morningAlerts}</span>
               </label>
               <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
                 <input
@@ -277,7 +412,7 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
                   onChange={(e) => setFormData({ ...formData, evening_alert: e.target.checked })}
                   className="w-4 h-4 text-green-600 rounded"
                 />
-                <span className="text-sm text-gray-700">Evening Alerts (5-8 PM)</span>
+                <span className="text-sm text-gray-700">{t.eveningAlerts}</span>
               </label>
             </div>
           </div>
@@ -288,13 +423,13 @@ const PreferencesModal = ({ isOpen, onClose, preferences, onSave }) => {
               disabled={saving}
               className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Saving...' : 'Save Preferences'}
+              {saving ? t.saving : t.savePreferences}
             </button>
             <button
               onClick={onClose}
               className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             >
-              Cancel
+              {t.cancel}
             </button>
           </div>
         </div>
@@ -314,14 +449,15 @@ export default function WeatherAdvisoryPage() {
   const [showPreferences, setShowPreferences] = useState(false);
   const [activeTab, setActiveTab] = useState('current');
   const [error, setError] = useState(null);
+  const [language, setLanguage] = useState('en');
   
   const { getToken } = useAuth();
   const token = getToken();
+  const t = translations[language];
 
   useEffect(() => {
     fetchWeatherData();
     fetchPreferences();
-    handleAcknowledge();
     
     // Auto-refresh every 5 minutes
     const interval = setInterval(() => {
@@ -364,7 +500,6 @@ export default function WeatherAdvisoryPage() {
       if (alertsRes.ok) {
         const alertsData = await alertsRes.json();
         setAlerts(alertsData);
-        console.log('Fetched alerts:', alertsData);
       }
       
       if (advisoryRes.ok) {
@@ -373,7 +508,7 @@ export default function WeatherAdvisoryPage() {
 
     } catch (error) {
       console.error('Error fetching weather data:', error);
-      setError('Failed to fetch weather data. Please try again.');
+      setError(t.failedToFetch);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -402,8 +537,6 @@ export default function WeatherAdvisoryPage() {
       
       if (res.ok) {
         setAlerts(alerts.filter(a => a.id !== alertId));
-      } else {
-        console.error('Failed to acknowledge alert');
       }
     } catch (error) {
       console.error('Error acknowledging alert:', error);
@@ -432,7 +565,7 @@ export default function WeatherAdvisoryPage() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <RefreshCw className="h-12 w-12 text-green-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading weather data...</p>
+          <p className="text-gray-600">{t.loadingWeather}</p>
         </div>
       </div>
     );
@@ -441,7 +574,17 @@ export default function WeatherAdvisoryPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Weather Advisory</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-3xl font-bold text-gray-900">{t.weatherAdvisory}</h2>
+          <button
+            onClick={() => setLanguage(language === 'en' ? 'te' : 'en')}
+            className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+            title={language === 'en' ? 'Switch to Telugu' : 'Switch to English'}
+          >
+            <Languages size={20} />
+            <span className="font-semibold">{language === 'en' ? 'తెలుగు' : 'English'}</span>
+          </button>
+        </div>
         <div className="flex gap-3">
           <button
             onClick={() => fetchWeatherData(true)}
@@ -449,14 +592,14 @@ export default function WeatherAdvisoryPage() {
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span className="text-sm font-medium">Refresh</span>
+            <span className="text-sm font-medium">{t.refresh}</span>
           </button>
           <button
             onClick={() => setShowPreferences(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Settings className="h-4 w-4" />
-            <span className="text-sm font-medium">Preferences</span>
+            <span className="text-sm font-medium">{t.preferences}</span>
           </button>
         </div>
       </div>
@@ -476,8 +619,8 @@ export default function WeatherAdvisoryPage() {
               {currentWeather?.location || 'Loading...'}
             </h3>
             <p className="text-blue-700 text-sm">
-              {currentWeather?.description || ''} • Last updated: {
-                currentWeather ? new Date(currentWeather.last_updated).toLocaleString() : 'Loading...'
+              {currentWeather?.description || ''} • {t.lastUpdated}: {
+                currentWeather ? new Date(currentWeather.last_updated).toLocaleString(language === 'te' ? 'te-IN' : 'en-US') : 'Loading...'
               }
             </p>
           </div>
@@ -487,9 +630,9 @@ export default function WeatherAdvisoryPage() {
       {/* Tabs */}
       <div className="flex gap-2 border-b-2 border-gray-200">
         {[
-          { id: 'current', label: 'Current Weather', icon: ThermometerSun },
-          { id: 'forecast', label: '7-Day Forecast', icon: Calendar },
-          { id: 'alerts', label: `Alerts (${alerts.length})`, icon: Bell }
+          { id: 'current', label: t.currentWeather, icon: ThermometerSun },
+          { id: 'forecast', label: t.forecast7Day, icon: Calendar },
+          { id: 'alerts', label: `${t.alerts} (${alerts.length})`, icon: Bell }
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -512,28 +655,28 @@ export default function WeatherAdvisoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <WeatherCard 
               icon={ThermometerSun} 
-              label="Temperature" 
+              label={t.temperature}
               value={currentWeather?.temperature || '--'} 
               unit="°C"
               color="orange"
             />
             <WeatherCard 
               icon={Droplets} 
-              label="Humidity" 
+              label={t.humidity}
               value={currentWeather?.humidity || '--'} 
               unit="%"
               color="blue"
             />
             <WeatherCard 
               icon={Cloud} 
-              label="Rainfall" 
+              label={t.rainfall}
               value={currentWeather?.rainfall || '0'} 
               unit="mm"
               color="indigo"
             />
             <WeatherCard 
               icon={Wind} 
-              label="Wind Speed" 
+              label={t.windSpeed}
               value={currentWeather?.wind_speed || '--'} 
               unit=" km/h"
               color="cyan"
@@ -542,9 +685,9 @@ export default function WeatherAdvisoryPage() {
 
           {advisory?.advisories && advisory.advisories.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-xl font-bold text-gray-900">Farming Advisory</h3>
+              <h3 className="text-xl font-bold text-gray-900">{t.farmingAdvisory}</h3>
               {advisory.advisories.map((adv, idx) => (
-                <AdvisoryCard key={idx} advisory={adv} />
+                <AdvisoryCard key={idx} advisory={adv} lang={language} />
               ))}
             </div>
           )}
@@ -554,7 +697,7 @@ export default function WeatherAdvisoryPage() {
       {/* Forecast Tab */}
       {activeTab === 'forecast' && (
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">7-Day Weather Forecast</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">{t.weatherForecast}</h3>
           <div className="space-y-3">
             {forecast.length > 0 ? (
               forecast.map((day, idx) => (
@@ -581,7 +724,7 @@ export default function WeatherAdvisoryPage() {
                 </div>
               ))
             ) : (
-              <p className="text-center text-gray-500 py-8">No forecast data available</p>
+              <p className="text-center text-gray-500 py-8">{t.noForecast}</p>
             )}
           </div>
         </div>
@@ -595,16 +738,16 @@ export default function WeatherAdvisoryPage() {
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
                 <Info className="h-10 w-10 text-gray-400" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">No Active Alerts</h3>
-              <p className="text-gray-600">You'll be notified when weather conditions require attention</p>
-              <p className="text-sm text-gray-500 mt-2">Stay tuned for important weather updates</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{t.noActiveAlerts}</h3>
+              <p className="text-gray-600">{t.notifiedWhen}</p>
+              <p className="text-sm text-gray-500 mt-2">{t.stayTuned}</p>
             </div>
           ) : (
             <>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
                 <Bell className="h-5 w-5 text-blue-600" />
                 <p className="text-blue-900 font-medium">
-                  You have {alerts.length} active weather {alerts.length === 1 ? 'alert' : 'alerts'}
+                  {t.youHave} {alerts.length} {alerts.length === 1 ? t.activeWeatherAlert : t.activeWeatherAlerts}
                 </p>
               </div>
               {alerts.map((alert) => (
@@ -612,6 +755,7 @@ export default function WeatherAdvisoryPage() {
                   key={alert.id} 
                   alert={alert} 
                   onAcknowledge={handleAcknowledge}
+                  lang={language}
                 />
               ))}
             </>
@@ -626,6 +770,7 @@ export default function WeatherAdvisoryPage() {
           onClose={() => setShowPreferences(false)}
           preferences={preferences}
           onSave={handleSavePreferences}
+          lang={language}
         />
       )}
     </div>
